@@ -1,0 +1,12 @@
+# banco do ERP (gerado em tempo de execução)
+erp/dados/
+
+# dependências e lixo do sistema
+node_modules/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# arquivos temporários
+*.log
+*.tmp

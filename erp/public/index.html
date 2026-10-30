@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Potato ERP</title>
+<style>
+  :root {
+    --bg: #0a0e13; --panel: #10161e; --panel2: #151d27; --line: #1e2935; --text: #d5dde8; --muted: #7a8799;
+    --accent: #e0a34a; --boa: #2fd36b; --susp: #ffc929; --ruim: #ff5d5d; --blue: #5aa9ff; --violet: #a78bfa;
+    --mono: ui-monospace, "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 13.5px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  button, select, textarea, input { font: inherit; color: var(--text); }
+  button { background: var(--panel2); border: 1px solid var(--line); border-radius: 7px; padding: 6px 12px; cursor: pointer; }
+  button:hover { border-color: #33455a; background: #1a2430; }
+  button.pri { background: var(--accent); color: #1a1405; border-color: var(--accent); font-weight: 650; }
+  select { background: var(--panel2); border: 1px solid var(--line); border-radius: 7px; padding: 5px 8px; max-width: 360px; }
+  a { color: var(--blue); text-decoration: none; }
+
+  .app { display: grid; grid-template-columns: 236px 1fr; grid-template-rows: 52px 1fr; height: 100%; }
+  header { grid-column: 1 / 3; display: flex; align-items: center; gap: 14px; padding: 0 16px; border-bottom: 1px solid var(--line); background: var(--panel); }
+  .brand { display: flex; align-items: center; gap: 9px; font-weight: 700; letter-spacing: .02em; }
+  .logo { width: 24px; height: 24px; border-radius: 7px; background: linear-gradient(135deg, #e0a34a, #b9772a); display: grid; place-items: center; color: #1a1405; font-size: 14px; }
+  .sp { flex: 1; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 99px; background: var(--panel2); border: 1px solid var(--line); font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .chip b { color: var(--text); font-family: var(--mono); font-weight: 600; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #6b7686; }
+  .dot.on { background: var(--boa); box-shadow: 0 0 8px var(--boa); } .dot.err { background: var(--ruim); }
+
+  nav { background: var(--panel); border-right: 1px solid var(--line); overflow: auto; padding: 10px 8px 24px; }
+  nav h6 { margin: 14px 8px 6px; font-size: 10.5px; letter-spacing: .12em; color: #5d6b7e; text-transform: uppercase; font-weight: 700; }
+  nav a { display: block; padding: 7px 10px; border-radius: 7px; color: #b6c2d1; }
+  nav a small { display: block; color: #66758a; font-size: 11px; }
+  nav a:hover { background: var(--panel2); }
+  nav a.on { background: #1b2735; color: #fff; box-shadow: inset 2px 0 var(--accent); }
+
+  main { overflow: auto; padding: 18px 22px 40px; }
+  h1 { font-size: 20px; margin: 0 0 2px; } .sub { color: var(--muted); margin-bottom: 16px; }
+  .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px 10px; min-width: 0; }
+  .card.wide { grid-column: 1 / 3; }
+  .card header { display: flex; align-items: flex-start; gap: 10px; background: none; border: 0; padding: 0; height: auto; margin-bottom: 6px; }
+  .card h3 { margin: 0; font-size: 14.5px; font-weight: 650; line-height: 1.3; }
+  .card .src { margin-left: auto; font: 11px var(--mono); color: #5d6b7e; white-space: nowrap; padding-top: 2px; }
+  .chart { width: 100%; }
+  .empty { display: grid; place-items: center; color: #5d6b7e; height: 100%; min-height: 120px; text-align: center; }
+  details.sql { margin-top: 4px; } details.sql summary { cursor: pointer; font-size: 11.5px; color: #66758a; user-select: none; }
+  details.sql pre { margin: 6px 0 2px; padding: 10px; background: #0a0f15; border: 1px solid var(--line); border-radius: 8px; overflow: auto; font: 11.5px/1.5 var(--mono); color: #9fb3c8; }
+
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 14px; }
+  .tile { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+  .tile .l { color: var(--muted); font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; }
+  .tile .v { font: 650 24px var(--mono); margin-top: 4px; } .tile .s { color: #66758a; font-size: 11.5px; margin-top: 2px; }
+  .pos { color: var(--boa); } .neg { color: var(--ruim); } .warn { color: var(--susp); }
+
+  table.t { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  table.t th { text-align: left; color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; position: sticky; top: 0; background: var(--panel); }
+  table.t td { padding: 6px 8px; border-bottom: 1px solid #161f2a; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  table.t td.n, table.t th.n { text-align: right; font-family: var(--mono); }
+  table.t tr:hover td { background: #131b25; }
+  .scroll { overflow: auto; max-height: 420px; border-radius: 8px; }
+  .verd { padding: 2px 9px; border-radius: 99px; font-size: 11.5px; font-weight: 700; }
+  .v-best { background: rgba(47,211,107,.16); color: #6dff9a; } .v-ok { background: rgba(90,169,255,.16); color: #9fd0ff; }
+  .v-warn { background: rgba(255,201,41,.16); color: #ffd76a; } .v-bad { background: rgba(255,93,93,.18); color: #ff9d9d; }
+  .insight { margin: 8px 0 0; padding: 8px 10px; border-left: 3px solid var(--accent); background: #131b25; border-radius: 0 8px 8px 0; color: #c1ccda; font-size: 12.5px; }
+
+  .sqlpage textarea { width: 100%; min-height: 150px; background: #0a0f15; border: 1px solid var(--line); border-radius: 10px; padding: 12px; font: 12.5px/1.55 var(--mono); color: #b9ccdf; resize: vertical; }
+  .bar { display: flex; gap: 8px; margin: 10px 0; align-items: center; flex-wrap: wrap; }
+  .err { color: #ff9d9d; font-family: var(--mono); font-size: 12px; }
+  .tabs { display: grid; grid-template-columns: 220px 1fr; gap: 14px; }
+  .tabs .list a { display: flex; justify-content: space-between; padding: 7px 10px; border-radius: 7px; color: #b6c2d1; cursor: pointer; font-family: var(--mono); font-size: 12.5px; }
+  .tabs .list a.on, .tabs .list a:hover { background: var(--panel2); }
+  @media (max-width: 1000px) { .app { grid-template-columns: 1fr; } nav { display: none; } .grid { grid-template-columns: 1fr; } .card.wide { grid-column: 1; } header { grid-column: 1; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand"><span class="logo">🥔</span> Potato ERP</div>
+    <span class="chip"><span class="dot" id="live"></span><span id="live-t">conectando…</span></span>
+    <span class="chip">execução <select id="run"></select></span>
+    <span class="chip">relógio da fábrica <b id="clk">—</b></span>
+    <span class="chip">eventos <b id="n-ev">0</b></span>
+    <span class="sp"></span>
+    <a href="/sim/" target="_blank"><button class="pri" type="button">Abrir simulador 3D ↗</button></a>
+  </header>
+  <nav id="nav"></nav>
+  <main id="main"></main>
+</div>
+<script src="lib/echarts.min.js"></script>
+<script>
+'use strict';
+// ───────────────────────── utilidades ─────────────────────────
+const $ = id => document.getElementById(id);
+const pad = n => String(n).padStart(2, '0');
+const fmtT = ms => { const d = new Date(ms); return `${pad(d.getUTCDate())}/${pad(d.getUTCMonth() + 1)} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`; };
+const fmtDur = min => min >= 60 ? `${Math.floor(min / 60)} h ${Math.round(min % 60)} min` : `${Math.round(min)} min`;
+const num = v => Number(v).toLocaleString('pt-BR');
+const SUPCOR = { 'F-01': '#3fae4a', 'F-02': '#3d7ccf', 'F-03': '#d6453b' };
+const CORES = { BOA: '#2fd36b', SUSPEITA: '#ffc929', RUIM: '#ff5d5d' };
+const esc = s => String(s ?? '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+
+echarts.registerTheme('potato', {
+  color: ['#5aa9ff', '#e0a34a', '#2fd36b', '#a78bfa', '#ff5d5d', '#4fd8ff'],
+  textStyle: { color: '#aab7c8', fontFamily: 'system-ui, Segoe UI, sans-serif' },
+  title: { textStyle: { color: '#d5dde8' } },
+  legend: { textStyle: { color: '#9fb0c4' } },
+  categoryAxis: { axisLine: { lineStyle: { color: '#2a3646' } }, axisTick: { show: false }, axisLabel: { color: '#8392a6' }, splitLine: { lineStyle: { color: '#16202b' } } },
+  valueAxis: { axisLine: { show: false }, axisLabel: { color: '#8392a6' }, splitLine: { lineStyle: { color: '#16202b' } } },
+  tooltip: { backgroundColor: '#0e1620', borderColor: '#243245', textStyle: { color: '#d5dde8' } },
+});
+const chartOf = el => echarts.getInstanceByDom(el) || echarts.init(el, 'potato');
+// anima só na primeira vez: nas atualizações ao vivo o gráfico apenas troca os dados
+const ANIM = new URLSearchParams(location.search).get('anim') !== '0';
+function setOpt(el, opt) {
+  for (const s of opt.series || []) if (s.lineStyle && s.lineStyle.color && !s.itemStyle) s.itemStyle = { color: s.lineStyle.color }; const c = chartOf(el), first = !el.__drawn; el.__drawn = true; c.setOption({ animation: first && ANIM, animationDuration: 450, ...opt }, true); }
+const gridBase = { left: 52, right: 18, top: 62, bottom: 30, containLabel: false };
+window.addEventListener('resize', () => document.querySelectorAll('.chart').forEach(el => { const c = echarts.getInstanceByDom(el); if (c) c.resize(); }));
+
+// ───────────────────────── acesso à API ─────────────────────────
+const S = { run: new URLSearchParams(location.search).get('run') || 'auto', page: 'painel', timer: null, es: null };
+const qs = extra => { const p = new URLSearchParams(extra || {}); if (S.run !== 'auto') p.set('run', S.run); const s = p.toString(); return s ? '?' + s : ''; };
+const api = (path, extra) => fetch(path + qs(extra)).then(r => r.json());
+
+// ───────────────────────── gráficos (cada um responde uma pergunta) ─────────────────────────
+function bucketLabels(rows) { return [...new Set(rows.map(r => r.t))].sort((a, b) => a - b); }
+
+function drawProducao(el, rows) {
+  const ts = bucketLabels(rows), by = {};
+  for (const r of rows) { const o = by[r.t] = by[r.t] || { boa: 0, suspeita: 0, ruim: 0 }; o.boa += r.boa; o.suspeita += r.suspeita; o.ruim += r.ruim; }
+  const turnoDe = {}; rows.forEach(r => { turnoDe[r.t] = r.turno; });
+  const serie = (nome, k, cor) => ({ name: nome, type: 'bar', stack: 'p', data: ts.map(t => by[t][k]), itemStyle: { color: cor }, barMaxWidth: 34 });
+  setOpt(el, {
+    grid: gridBase, legend: { top: 2, right: 8 }, tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' },
+      formatter: ps => `<b>${ps[0].axisValue}</b> · turno ${turnoDe[ts[ps[0].dataIndex]]}<br>` + ps.map(p => `${p.marker}${p.seriesName}: <b>${p.value}</b>`).join('<br>') + `<br>Total: <b>${ps.reduce((s, p) => s + p.value, 0)}</b>` },
+    xAxis: { type: 'category', data: ts.map(fmtT) }, yAxis: { type: 'value', name: 'batatas/h' },
+    series: [serie('BOA', 'boa', CORES.BOA), serie('SUSPEITA', 'suspeita', CORES.SUSPEITA), serie('RUIM', 'ruim', CORES.RUIM)],
+  }, true);
+}
+function tableTurno(el, rows) {
+  el.innerHTML = rows.length ? `<table class="t"><thead><tr><th>Turno</th><th class="n">Batatas</th><th class="n">% BOA</th><th class="n">% SUSPEITA</th><th class="n">% RUIM</th></tr></thead><tbody>`
+    + rows.map(r => `<tr><td><b>${r.turno}</b></td><td class="n">${num(r.total)}</td><td class="n pos">${r.pct_boa}%</td><td class="n warn">${r.pct_suspeita}%</td><td class="n neg">${r.pct_ruim}%</td></tr>`).join('') + '</tbody></table>' : '';
+}
+function drawThroughput(el, rows, [paradas]) {
+  const by = {}; rows.forEach(r => { by[r.t] = (by[r.t] || 0) + r.total; });
+  const ts = Object.keys(by).map(Number).sort((a, b) => a - b), labels = ts.map(fmtT), B = ts.length > 1 ? ts[1] - ts[0] : 1800000;
+  const area = (paradas.rows || []).map(p => {
+    const a = fmtT(Math.floor(p.inicio_ts / B) * B), b = fmtT(Math.floor(p.fim_ts / B) * B);
+    return labels.includes(a) ? [{ name: p.tipo.replace('_', ' '), xAxis: a, itemStyle: { color: p.tipo === 'esteira_travada' ? 'rgba(255,93,93,.22)' : 'rgba(255,201,41,.18)' } }, { xAxis: labels.includes(b) ? b : a }] : null;
+  }).filter(Boolean);
+  setOpt(el, {
+    grid: gridBase, tooltip: { trigger: 'axis' }, xAxis: { type: 'category', data: labels }, yAxis: { type: 'value', name: 'batatas / 30 min' },
+    series: [{ name: 'Batatas escaneadas', type: 'line', smooth: .25, symbolSize: 5, data: ts.map(t => by[t]), itemStyle: { color: '#5aa9ff' }, areaStyle: { color: 'rgba(90,169,255,.12)' }, markArea: { data: area, label: { color: '#ffb3b3', fontSize: 10 } } }],
+  }, true);
+}
+function drawRefugoLote(el, rows) {
+  const lotes = rows.map(r => r.lote_id), fs = [...new Set(rows.map(r => r.fornecedor_id))].sort();
+  const mm = rows.map((r, i) => { const w = rows.slice(Math.max(0, i - 1), i + 2); return +(w.reduce((s, x) => s + x.pct_refugo, 0) / w.length).toFixed(1); });
+  const media = rows.length ? +(rows.reduce((s, r) => s + r.pct_refugo, 0) / rows.length).toFixed(1) : 0;
+  setOpt(el, {
+    grid: gridBase, legend: { top: 2, right: 8 }, tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' },
+      formatter: ps => { const r = rows[ps[0].dataIndex]; return `<b>${r.lote_id}</b> · ${r.fornecedor_id}<br>Refugo: <b>${r.pct_refugo}%</b><br>Suspeitas: ${r.pct_suspeita}%<br>Batatas: ${r.n}`; } },
+    xAxis: { type: 'category', data: lotes }, yAxis: { type: 'value', name: '% refugo', axisLabel: { formatter: '{value}%' } },
+    series: [...fs.map(f => ({ name: f, type: 'bar', data: rows.map(r => r.fornecedor_id === f ? r.pct_refugo : null), itemStyle: { color: SUPCOR[f] || '#888' }, barMaxWidth: 30, stack: 'x' })),
+      { name: 'tendência (média móvel)', type: 'line', data: mm, smooth: true, symbol: 'none', lineStyle: { color: '#e0a34a', width: 2, type: 'dashed' },
+        markLine: { silent: true, symbol: 'none', data: [{ yAxis: media, label: { formatter: `média ${media}%`, color: '#8b98aa' }, lineStyle: { color: '#44556b' } }] } }],
+  }, true);
+}
+function drawConfusao(el, rows) {
+  const faixas = ['< 0,50', '0,50 a 0,60', '>= 0,60'], finais = ['BOA', 'RUIM'];
+  const data = []; let max = 1;
+  faixas.forEach((f, yi) => finais.forEach((r, xi) => { const n = (rows.find(x => x.faixa === f && x.rotulo_final === r) || {}).n || 0; max = Math.max(max, n); data.push([xi, yi, n]); }));
+  const tot = faixas.map((f, yi) => data.filter(d => d[1] === yi).reduce((s, d) => s + d[2], 0));
+  setOpt(el, {
+    grid: { left: 96, right: 18, top: 16, bottom: 52 }, tooltip: { formatter: p => `Confiança ${faixas[p.value[1]]} → ${finais[p.value[0]]}<br><b>${p.value[2]}</b> batatas` },
+    xAxis: { type: 'category', data: finais.map(f => 'rótulo final: ' + f), splitArea: { show: true } }, yAxis: { type: 'category', data: faixas, name: '' },
+    visualMap: { min: 0, max, orient: 'horizontal', left: 'center', bottom: 0, inRange: { color: ['#12202f', '#3b78c4', '#e0a34a'] }, textStyle: { color: '#8392a6' }, itemWidth: 12, itemHeight: 110 },
+    series: [{ type: 'heatmap', data, label: { show: true, color: '#fff', fontFamily: 'ui-monospace, Consolas, monospace', formatter: p => { const t = tot[p.value[1]] || 1; return `${p.value[2]}\n${Math.round(100 * p.value[2] / t)}%`; } }, itemStyle: { borderColor: '#0a0e13', borderWidth: 3 } }],
+  }, true);
+}
+function drawAprovacao(el, rows, [cal]) {
+  const ts = rows.map(r => r.t), B = ts.length > 1 ? ts[1] - ts[0] : 3600000, cm = {};
+  (cal.rows || []).forEach(c => { const k = Math.floor(c.ts / B) * B; (cm[k] = cm[k] || []).push(c.calibracao); });
+  setOpt(el, {
+    grid: { ...gridBase, right: 52 }, legend: { top: 2, right: 8 }, tooltip: { trigger: 'axis' }, xAxis: { type: 'category', data: ts.map(fmtT) },
+    yAxis: [{ type: 'value', name: '% aprovadas', min: 0, max: 100, axisLabel: { formatter: '{value}%' } }, { type: 'value', name: 'calibração', min: 30, max: 100, splitLine: { show: false }, axisLabel: { formatter: '{value}%' } }],
+    series: [{ name: 'Suspeitas aprovadas por humanos', type: 'line', smooth: .2, data: rows.map(r => r.pct_aprovadas), itemStyle: { color: '#ffc929' }, symbolSize: 6 },
+      { name: 'Calibração do sensor', type: 'line', yAxisIndex: 1, smooth: .2, symbol: 'none', lineStyle: { color: '#5aa9ff', width: 2 }, areaStyle: { color: 'rgba(90,169,255,.08)' },
+        data: ts.map(t => cm[t] ? +(100 * cm[t].reduce((s, v) => s + v, 0) / cm[t].length).toFixed(1) : null), connectNulls: true }],
+  }, true);
+}
+function drawFornAproveit(el, rows) {
+  setOpt(el, {
+    grid: { ...gridBase, right: 20 }, legend: { top: 2, right: 8 }, tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, valueFormatter: v => v + '%' },
+    xAxis: { type: 'category', data: rows.map(r => `${r.fornecedor_id} ${r.nome}`) },
+    yAxis: { type: 'value', name: '% do peso', min: 0, max: 100, axisLabel: { formatter: '{value}%' } },
+    series: [{ name: 'Aproveitado', type: 'bar', barMaxWidth: 54, itemStyle: { color: '#2fd36b' }, data: rows.map(r => ({ value: r.pct_aproveitado, itemStyle: { color: SUPCOR[r.fornecedor_id] } })),
+        label: { show: true, position: 'top', color: '#d5dde8', formatter: p => p.value + '%' } },
+      { name: 'Refugo', type: 'line', data: rows.map(r => r.pct_refugo), symbolSize: 9, lineStyle: { type: 'dashed', color: '#ff5d5d' }, itemStyle: { color: '#ff5d5d' } }],
+  }, true);
+}
+function drawFornKg(el, rows) {
+  setOpt(el, {
+    grid: gridBase, legend: { top: 2, right: 8 }, tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    xAxis: { type: 'category', data: rows.map(r => `${r.fornecedor_id} ${r.nome}`) }, yAxis: { type: 'value', name: 'kg' },
+    series: [{ name: 'kg aproveitado', type: 'bar', stack: 'k', data: rows.map(r => r.kg_aproveitado), itemStyle: { color: '#2fd36b' }, barMaxWidth: 54 },
+      { name: 'kg de refugo', type: 'bar', stack: 'k', data: rows.map(r => r.kg_refugo), itemStyle: { color: '#ff5d5d' }, barMaxWidth: 54,
+        label: { show: true, color: '#fff', formatter: p => rows[p.dataIndex].pct_refugo + '%' } }],
+  }, true);
+}
+function tableFornecedores(el, rows) {
+  if (!rows.length) { el.innerHTML = ''; return; }
+  const best = rows[0], worst = rows[rows.length - 1];                    // ordenados por % aproveitado, do maior para o menor
+  const veredito = r => {
+    if (rows.length > 1 && r === best) return ['Melhor aproveitamento', 'v-best'];
+    if (r.pct_aproveitado >= 80) return ['Boa qualidade', 'v-ok'];
+    if (r.pct_aproveitado >= 65) return ['Qualidade regular', 'v-warn'];
+    return ['Alto refugo', 'v-bad'];
+  };
+  const texto = rows.length > 1
+    ? `<b>${esc(best.nome)}</b> aproveita <b>${best.pct_aproveitado}%</b> do peso entregue; <b>${esc(worst.nome)}</b> aproveita <b>${worst.pct_aproveitado}%</b> (${worst.pct_refugo}% de refugo e ${worst.pct_corpo}% de corpos estranhos).`
+    : 'Aguardando mais fornecedores para comparar.';
+  el.innerHTML = `<table class="t"><thead><tr><th>Fornecedor</th><th class="n">Batatas</th><th class="n">kg recebidos</th><th class="n">% refugo</th><th class="n">% suspeitas</th><th class="n">% corpos estranhos</th><th class="n">kg aproveitados</th><th class="n">% aproveitado</th><th>Veredito</th></tr></thead><tbody>`
+    + rows.map(r => { const v = veredito(r); return `<tr><td><span style="color:${SUPCOR[r.fornecedor_id]}">●</span> <b>${r.fornecedor_id}</b> ${esc(r.nome)}</td><td class="n">${num(r.n)}</td><td class="n">${r.kg}</td><td class="n ${r.pct_refugo > 30 ? 'neg' : ''}">${r.pct_refugo}%</td><td class="n">${r.pct_suspeita}%</td><td class="n">${r.pct_corpo}%</td><td class="n">${r.kg_aproveitado}</td><td class="n"><b>${r.pct_aproveitado}%</b></td><td><span class="verd ${v[1]}">${v[0]}</span></td></tr>`; }).join('')
+    + `</tbody></table><p class="insight">${texto}</p>`;
+}
+function drawRendimento(el, rows) {
+  setOpt(el, {
+    grid: { ...gridBase, right: 56 }, legend: { top: 2, right: 8 }, tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } }, xAxis: { type: 'category', data: rows.map(r => fmtT(r.t)) },
+    yAxis: [{ type: 'value', name: 'kg' }, { type: 'value', name: '% aproveitado', min: 0, max: 100, splitLine: { show: false }, axisLabel: { formatter: '{value}%' } }],
+    series: [{ name: 'kg aproveitado', type: 'bar', stack: 'k', data: rows.map(r => r.kg_aproveitado), itemStyle: { color: '#2fd36b' }, barMaxWidth: 34 },
+      { name: 'kg de refugo', type: 'bar', stack: 'k', data: rows.map(r => r.kg_refugo), itemStyle: { color: '#ff5d5d' }, barMaxWidth: 34 },
+      { name: '% aproveitado', type: 'line', yAxisIndex: 1, data: rows.map(r => r.pct_aproveitado), symbolSize: 7, itemStyle: { color: '#e0a34a' }, lineStyle: { width: 2.5 } }],
+  }, true);
+}
+function drawExpedTempo(el, rows) {
+  setOpt(el, {
+    grid: gridBase, legend: { top: 2, right: 8 }, tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } }, xAxis: { type: 'category', data: rows.map(r => fmtT(r.t)) },
+    yAxis: { type: 'value', name: 'volumes expedidos', minInterval: 1 },
+    series: [{ name: 'Sacos', type: 'bar', stack: 'v', data: rows.map(r => r.sacos), itemStyle: { color: '#d6a24b' }, barMaxWidth: 40 },
+      { name: 'Caixas', type: 'bar', stack: 'v', data: rows.map(r => r.caixas), itemStyle: { color: '#8a6a44' }, barMaxWidth: 40 }],
+  }, true);
+}
+function drawSensor(el, rows, [cal]) {
+  const ts = rows.map(r => r.t), B = ts.length > 1 ? ts[1] - ts[0] : 900000, cm = {};
+  (cal.rows || []).forEach(c => { const k = Math.floor(c.ts / B) * B; (cm[k] = cm[k] || []).push(c.calibracao); });
+  const mm = rows.map((r, i) => { const w = rows.slice(Math.max(0, i - 2), i + 1); return +(w.reduce((s, x) => s + x.media, 0) / w.length).toFixed(2); });
+  setOpt(el, {
+    grid: { ...gridBase, right: 52 }, legend: { top: 2, right: 8, data: ['média do cor_matiz', 'média móvel (3)', 'calibração do sensor'] },
+    tooltip: { trigger: 'axis', formatter: ps => { const r = rows[ps[0].dataIndex]; return `<b>${ps[0].axisValue}</b><br>média ${r.media}° · desvio ${r.desvio}° · n=${r.n}`; } },
+    xAxis: { type: 'category', data: ts.map(fmtT) },
+    yAxis: [{ type: 'value', name: 'cor_matiz (°)', scale: true }, { type: 'value', name: 'calibração', min: 30, max: 100, splitLine: { show: false }, axisLabel: { formatter: '{value}%' } }],
+    series: [{ name: 'base', type: 'line', stack: 'b', symbol: 'none', lineStyle: { opacity: 0 }, data: rows.map(r => +(r.media - r.desvio).toFixed(2)), tooltip: { show: false } },
+      { name: 'faixa ±1 desvio', type: 'line', stack: 'b', symbol: 'none', lineStyle: { opacity: 0 }, areaStyle: { color: 'rgba(90,169,255,.16)' }, data: rows.map(r => +(2 * r.desvio).toFixed(2)) },
+      { name: 'média do cor_matiz', type: 'line', symbolSize: 6, itemStyle: { color: '#5aa9ff' }, data: rows.map(r => r.media),
+        markLine: { silent: true, symbol: 'none', data: [{ yAxis: 34, label: { formatter: 'referência 34°', color: '#8b98aa', position: 'insideStartTop' }, lineStyle: { color: '#44556b', type: 'dashed' } }] } },
+      { name: 'média móvel (3)', type: 'line', symbol: 'none', smooth: true, lineStyle: { color: '#e0a34a', width: 2.5 }, data: mm },
+      { name: 'calibração do sensor', type: 'line', yAxisIndex: 1, symbol: 'none', lineStyle: { color: '#ff5d5d', width: 1.5, type: 'dotted' }, data: ts.map(t => cm[t] ? +(100 * cm[t].reduce((s, v) => s + v, 0) / cm[t].length).toFixed(1) : null), connectNulls: true }],
+  }, true);
+}
+function drawParadas(el, rows) {
+  const por = {}; rows.forEach(r => { const o = por[r.tipo] = por[r.tipo] || { n: 0, min: 0 }; o.n++; o.min += r.duracao_min || 0; });
+  const tipos = Object.keys(por);
+  setOpt(el, {
+    grid: { ...gridBase, right: 52 }, legend: { top: 2, right: 8 }, tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    xAxis: { type: 'category', data: tipos.map(t => t.replace('_', ' ')) }, yAxis: [{ type: 'value', name: 'min parados' }, { type: 'value', name: 'ocorrências', splitLine: { show: false }, minInterval: 1 }],
+    series: [{ name: 'Tempo parado (min de fábrica)', type: 'bar', data: tipos.map(t => +por[t].min.toFixed(1)), itemStyle: { color: '#ff5d5d' }, barMaxWidth: 60 },
+      { name: 'Ocorrências', type: 'line', yAxisIndex: 1, data: tipos.map(t => por[t].n), itemStyle: { color: '#ffc929' }, symbolSize: 9 }],
+  }, true);
+}
+const tabela = (cols, rows) => rows.length ? `<div class="scroll"><table class="t"><thead><tr>${cols.map(c => `<th class="${c.n ? 'n' : ''}">${c.h}</th>`).join('')}</tr></thead><tbody>`
+  + rows.map(r => `<tr>${cols.map(c => `<td class="${c.n ? 'n' : ''}">${c.f ? c.f(r[c.k], r) : esc(r[c.k])}</td>`).join('')}</tr>`).join('') + '</tbody></table></div>' : '';
+function tableParadas(el, rows) {
+  el.innerHTML = tabela([{ h: 'OS', k: 'os_id', n: 1 }, { h: 'Tipo', k: 'tipo', f: v => v.replace('_', ' ') }, { h: 'Início', k: 'inicio_ts', f: fmtT }, { h: 'Duração', k: 'duracao_min', n: 1, f: v => fmtDur(v) }], rows);
+}
+const tableCompras = (el, rows) => { el.innerHTML = tabela([{ h: 'Lote', k: 'lote_id' }, { h: 'Fornecedor', k: 'fornecedor_id', f: (v, r) => `<span style="color:${SUPCOR[v]}">●</span> ${v} ${esc(r.nome)}` }, { h: 'Chegada', k: 'ts', f: fmtT },
+  { h: 'Caixas', k: 'caixas', n: 1 }, { h: 'Batatas', k: 'batatas', n: 1 }, { h: 'Já processadas', k: 'processadas', n: 1 }], rows); };
+const tableExped = (el, rows) => { el.innerHTML = tabela([{ h: 'Carga', k: 'carga_id', n: 1 }, { h: 'Saída', k: 'ts', f: fmtT }, { h: 'Paletes', k: 'paletes', n: 1 }, { h: 'Sacos', k: 'sacos', n: 1 }, { h: 'Caixas', k: 'caixas', n: 1 }, { h: 'Volumes', k: 'volumes', n: 1 }], rows); };
+function drawEstoque(el, rows) {
+  setOpt(el, {
+    grid: { ...gridBase, right: 62 }, legend: { top: 2, right: 8 }, tooltip: { trigger: 'axis' }, xAxis: { type: 'category', data: rows.map(r => fmtT(r.ts)) },
+    yAxis: [{ type: 'value', name: 'caixas / paletes' }, { type: 'value', name: 'batatas na tremonha', splitLine: { show: false } }],
+    series: [{ name: 'Armazém de matéria-prima (caixas)', type: 'line', symbol: 'none', data: rows.map(r => r.mp_caixas), lineStyle: { color: '#e0a34a' } },
+      { name: 'Tremonha (batatas)', type: 'line', yAxisIndex: 1, symbol: 'none', data: rows.map(r => r.tremonha), lineStyle: { color: '#5aa9ff' }, areaStyle: { color: 'rgba(90,169,255,.08)' } },
+      { name: 'Expedição (paletes)', type: 'line', step: 'end', symbol: 'none', data: rows.map(r => r.expedicao), lineStyle: { color: '#2fd36b' } },
+      { name: 'Estoque acabado (paletes)', type: 'line', step: 'end', symbol: 'none', data: rows.map(r => r.estoque), lineStyle: { color: '#a78bfa' } }],
+  }, true);
+}
+
+// ───────────────────────── páginas ─────────────────────────
+const Q = (id, pergunta, q, draw, o = {}) => ({ id, pergunta, q, draw, h: 300, ...o });
+const PAGES = {
+  painel: { titulo: 'Painel', sub: 'Visão geral da operação, alimentada ao vivo pelo simulador 3D.', tiles: true, cards: [
+    Q('p1', 'Quantas batatas por hora e qual a composição BOA / SUSPEITA / RUIM?', 'producao_tempo', drawProducao, { params: { b: 60 } }),
+    Q('p2', 'Quanto do que entra vira produto? (kg aproveitado × refugo por hora)', 'rendimento_tempo', drawRendimento, { params: { b: 60 } }),
+  ] },
+  producao: { grupo: 'Gerente de produção', titulo: 'Produção', sub: 'Volume, composição por qualidade e paradas.', cards: [
+    Q('g1', 'Quantas batatas por hora e qual o % de BOA / RUIM / SUSPEITA?', 'producao_tempo', drawProducao, { params: { b: 60 }, wide: 1 }),
+    Q('g2', 'Como cada turno se comporta (volume e % por classe)?', 'producao_turno', tableTurno, { html: 1, h: 150 }),
+    Q('g3', 'A produção caiu em algum momento? Foi por parada de equipamento?', 'throughput', drawThroughput, { q: 'producao_tempo', params: { b: 30 }, needs: [['paradas']], wide: 1 }),
+  ] },
+  qualidade: { grupo: 'Qualidade', titulo: 'Qualidade', sub: 'Refugo por lote, classificador e o efeito do sensor.', cards: [
+    Q('q1', 'Qual lote/fornecedor tem a maior taxa de refugo e qual é a tendência?', 'refugo_lote', drawRefugoLote, { wide: 1 }),
+    Q('q2', 'O classificador acerta nas SUSPEITAS? (confiança × rótulo final dos inspetores)', 'confusao_suspeitas', drawConfusao),
+    Q('q3', 'O sensor está superestimando suspeitas? (aprovação humana × calibração)', 'aprovacao_tempo', drawAprovacao, { params: { b: 60 }, needs: [['calibracao']] }),
+  ] },
+  compras: { grupo: 'Compras', titulo: 'Compras', sub: 'Fornecedores comparados pela qualidade do que entregam.', cards: [
+    Q('c1', 'Qual fornecedor tem o maior aproveitamento do peso entregue?', 'fornecedores', drawFornAproveit),
+    Q('c2', 'Quantos kg de cada fornecedor viram refugo?', 'fornecedores', drawFornKg),
+    Q('c3', 'Qual a qualidade de cada fornecedor? (refugo, suspeitas e corpos estranhos)', 'fornecedores', tableFornecedores, { html: 1, h: 190, wide: 1 }),
+    Q('c4', 'Quais lotes chegaram e quanto de cada um já foi processado?', 'compras_lista', tableCompras, { html: 1, h: 160, wide: 1 }),
+  ] },
+  diretoria: { grupo: 'Diretoria', titulo: 'Diretoria', sub: 'Rendimento da fábrica e expedição.', cards: [
+    Q('d1', 'Qual o rendimento da fábrica ao longo do tempo? (kg aproveitado × refugo)', 'rendimento_tempo', drawRendimento, { params: { b: 60 }, wide: 1 }),
+    Q('d2', 'Quanto foi expedido por hora? (sacos e caixas)', 'expedicao_tempo', drawExpedTempo, { params: { b: 60 } }),
+    Q('d3', 'Quais cargas saíram da fábrica?', 'expedicao_lista', tableExped, { html: 1, h: 160 }),
+  ] },
+  manutencao: { grupo: 'Manutenção', titulo: 'Manutenção', sub: 'Saúde do sensor e paradas.', cards: [
+    Q('m1', 'O sensor está descalibrando? (média móvel e desvio do cor_matiz)', 'sensor_cor', drawSensor, { params: { b: 15 }, needs: [['calibracao']], wide: 1 }),
+    Q('m2', 'Quantas paradas tivemos e quanto tempo ficamos parados, por tipo?', 'paradas', drawParadas),
+    Q('m3', 'Ordens de manutenção (histórico)', 'paradas', tableParadas, { html: 1, h: 190 }),
+  ] },
+  estoque: { titulo: 'Estoque e expedição', sub: 'Níveis de matéria-prima, expedição e estoque acabado.', cards: [
+    Q('e1', 'Como estão os níveis de estoque ao longo do tempo?', 'estoque_tempo', drawEstoque, { wide: 1 }),
+    Q('e2', 'Quais cargas foram expedidas?', 'expedicao_lista', tableExped, { html: 1, h: 160, wide: 1 }),
+  ] },
+};
+const NAV = [
+  ['Visão geral', [['painel', 'Painel']]],
+  ['Por público', [['producao', 'Produção', 'Gerente de produção'], ['qualidade', 'Qualidade', 'Controle de qualidade'], ['compras', 'Compras', 'Fornecedores'], ['diretoria', 'Diretoria', 'Rendimento e expedição'], ['manutencao', 'Manutenção', 'Sensores e paradas']]],
+  ['Operação', [['estoque', 'Estoque e expedição']]],
+  ['Dados', [['tabelas', 'Tabelas', 'Explorar o banco'], ['sql', 'Consulta SQL', 'Somente leitura']]],
+];
+$('nav').innerHTML = NAV.map(([g, items]) => `<h6>${g}</h6>` + items.map(([id, t, s]) => `<a href="#${id}" data-p="${id}">${t}${s ? `<small>${s}</small>` : ''}</a>`).join('')).join('');
+
+// ───────────────────────── renderização ─────────────────────────
+function showPage() {
+  S.page = location.hash.slice(1) || 'painel';
+  document.querySelectorAll('nav a').forEach(a => a.classList.toggle('on', a.dataset.p === S.page));
+  const main = $('main');
+  if (S.page === 'tabelas') { refreshHeader(); return pageTabelas(main); }
+  if (S.page === 'sql') { refreshHeader(); return pageSql(main); }
+  const P = PAGES[S.page] || PAGES.painel;
+  main.innerHTML = `${P.grupo ? `<div class="chip" style="margin-bottom:8px">Perguntas do(a) ${P.grupo}</div>` : ''}<h1>${P.titulo}</h1><div class="sub">${P.sub}</div>`
+    + (P.tiles ? '<div class="tiles" id="tiles"></div>' : '')
+    + '<div class="grid">' + P.cards.map(c => `<section class="card ${c.wide ? 'wide' : ''}" id="${c.id}"><header><h3>${c.pergunta}</h3><span class="src">${c.q || ''}</span></header>
+      <div class="chart" style="height:${c.h}px"></div><details class="sql"><summary>ver SQL</summary><pre></pre></details></section>`).join('') + '</div>';
+  refresh();
+}
+async function refresh() {
+  const P = PAGES[S.page]; if (!P) return;
+  document.body.dataset.ready = '';
+  refreshHeader();
+  if (P.tiles) await drawTiles();
+  await Promise.all(P.cards.map(async c => {
+    const sec = $(c.id); if (!sec) return;
+    const el = sec.querySelector('.chart');
+    try {
+    const name = c.q === 'throughput' ? 'producao_tempo' : c.q;
+    const main = await api('/api/q/' + name, c.params);
+    const extra = await Promise.all((c.needs || []).map(([n, pr]) => api('/api/q/' + n, pr)));
+    sec.querySelector('pre').textContent = main.sql ? main.sql.replace(/\?/g, ':run') : '';
+    if (!main.rows || !main.rows.length) { { const old = echarts.getInstanceByDom(el); if (old) old.dispose(); } el.innerHTML = '<div class="empty">Sem dados ainda.<br>Abra o simulador 3D e deixe a linha rodar.</div>'; return; }
+    if (c.html) { const old = echarts.getInstanceByDom(el); if (old) old.dispose(); c.draw(el, main.rows, extra); el.style.height = 'auto'; el.style.minHeight = '40px'; }
+    else { if (!echarts.getInstanceByDom(el)) el.innerHTML = ''; c.draw(el, main.rows, extra); }
+    } catch (e) { console.error(c.id, e); el.innerHTML = '<div class="empty err">Erro ao desenhar: ' + esc(e.message) + '</div>'; }
+  }));
+  document.body.dataset.ready = '1';
+}
+async function drawTiles() {
+  const k = await api('/api/kpis'), ev = k.eventos || {}, p = k.pesos || {}, ex = k.expedicao || {}, n = ev.n || 0;
+  const tile = (l, v, s = '', cls = '') => `<div class="tile"><div class="l">${l}</div><div class="v ${cls}">${v}</div><div class="s">${s}</div></div>`;
+  const cal = k.calibracao === null ? '—' : Math.round(k.calibracao * 100) + '%', deriva = k.calibracao !== null && k.calibracao < 0.75;
+  $('tiles').innerHTML = tile('Batatas escaneadas', num(n), `${p.kg || 0} kg processados`) + tile('% BOA', n ? (100 * ev.boa / n).toFixed(1) + '%' : '—', 'leitura do sensor', 'pos')
+    + tile('% refugo', n ? (100 * ev.refugo / n).toFixed(1) + '%' : '—', `${p.refugo || 0} kg descartados`, 'neg') + tile('Aproveitamento', p.kg ? (100 * p.aproveitado / p.kg).toFixed(1) + '%' : '—', `${p.aproveitado || 0} kg viraram produto`, 'pos')
+    + tile('Vazão (última hora)', num(k.ultima_hora || 0), 'batatas / hora de fábrica') + tile('Suspeitas', num(ev.susp || 0), `${ev.corpo || 0} corpos estranhos`, 'warn')
+    + tile('Expedido', `${ex.paletes || 0} paletes`, `${ex.cargas || 0} cargas · ${ex.volumes || 0} volumes`)
+    + tile('Calibração do sensor', cal, deriva ? 'deriva detectada' : 'dentro do normal', deriva ? 'warn' : '')
+    + tile('Paradas', (k.manutencao || {}).n || 0, `${fmtDur((k.manutencao || {}).min || 0)} parados`);
+}
+async function refreshHeader() {
+  const k = await api('/api/kpis'); const ev = k.eventos || {};
+  $('n-ev').textContent = num(ev.n || 0); $('clk').textContent = ev.t1 ? fmtT(ev.t1) : '—';
+}
+async function loadRuns() {
+  const runs = await fetch('/api/runs').then(r => r.json());
+  const cur = S.run;
+  $('run').innerHTML = `<option value="auto">última execução (automático)</option>` + runs.map(r => `<option value="${r.run_id}">${r.run_id} · ${num(r.eventos)} eventos · ${r.ultimo_ts ? fmtT(r.ultimo_ts) : ''}</option>`).join('');
+  $('run').value = cur;
+}
+$('run').addEventListener('change', e => { S.run = e.target.value; showPage(); });
+
+// ───────────────────────── explorador de tabelas e console SQL ─────────────────────────
+async function pageTabelas(main) {
+  main.innerHTML = `<h1>Tabelas</h1><div class="sub">Os dados brutos do ERP, exatamente como o simulador os gravou.</div><div class="tabs"><div class="list card" id="tl"></div><div class="card"><div id="tv"></div></div></div>
+    <p><button id="limpar" type="button">Apagar todos os dados do ERP…</button></p>`;
+  const lista = await fetch('/api/tabelas').then(r => r.json());
+  $('tl').innerHTML = lista.map(t => `<a data-t="${t.tabela}">${t.tabela}<span style="color:#66758a">${num(t.linhas)}</span></a>`).join('');
+  const abre = async t => {
+    document.querySelectorAll('#tl a').forEach(a => a.classList.toggle('on', a.dataset.t === t));
+    const j = await api('/api/tabela/' + t, { limit: 150 });
+    const cols = j.rows[0] ? Object.keys(j.rows[0]) : [];
+    $('tv').innerHTML = `<b style="font-family:var(--mono)">${t}</b> <span style="color:#66758a">(últimas ${j.rows.length} linhas)</span>`
+      + (cols.length ? tabela(cols.map(c => ({ h: c, k: c, n: typeof j.rows[0][c] === 'number' })), j.rows) : '<p class="sub">Tabela vazia.</p>');
+  };
+  $('tl').onclick = e => { const a = e.target.closest('a'); if (a) abre(a.dataset.t); };
+  abre('eventos');
+  $('limpar').onclick = async () => { if (confirm('Apagar TODOS os dados do ERP? (não afeta o simulador)')) { await fetch('/api/limpar', { method: 'POST' }); loadRuns(); showPage(); } };
+}
+const EXEMPLOS = {
+  'Refugo por fornecedor': `SELECT fornecedor_id, COUNT(*) AS n,\n       ROUND(100.0 * SUM(classificacao = 'RUIM') / COUNT(*), 1) AS pct_ruim\nFROM eventos GROUP BY fornecedor_id ORDER BY pct_ruim DESC`,
+  'Peso médio por defeito': `SELECT tipo_defeito, COUNT(*) AS n, ROUND(AVG(peso_g), 1) AS peso_medio_g, ROUND(AVG(area_defeito_pct), 1) AS area_media\nFROM eventos GROUP BY tipo_defeito ORDER BY n DESC`,
+  'Quem decidiu o quê (inspetores)': `SELECT inspetor_id, classificacao_final, COUNT(*) AS n\nFROM eventos WHERE inspetor_id IS NOT NULL GROUP BY 1, 2 ORDER BY 1, 2`,
+  'Volumes por carga': `SELECT carga_id, COUNT(*) AS paletes, SUM(volumes) AS volumes FROM expedicao GROUP BY carga_id`,
+  'Lotes e fornecedores': `SELECT c.lote_id, d.nome, c.batatas, (SELECT COUNT(*) FROM eventos e WHERE e.lote_id = c.lote_id AND e.run_id = c.run_id) AS processadas\nFROM compras c JOIN dim_fornecedores d USING (fornecedor_id) ORDER BY c.ts`,
+};
+function pageSql(main) {
+  main.innerHTML = `<div class="sqlpage"><h1>Consulta SQL</h1><div class="sub">Banco SQLite do ERP (somente leitura). Tabelas: eventos, compras, expedicao, manutencao, sensor_saude, estoque_snap, dim_fornecedores, runs.</div>
+    <div class="bar"><select id="ex">${Object.keys(EXEMPLOS).map(k => `<option>${k}</option>`).join('')}</select><button id="go" class="pri" type="button">Executar (Ctrl+Enter)</button><span id="msg" class="err"></span></div>
+    <textarea id="sqlt" spellcheck="false"></textarea><div class="card" style="margin-top:12px"><div id="res"></div></div></div>`;
+  const t = $('sqlt'); t.value = Object.values(EXEMPLOS)[0];
+  $('ex').onchange = e => { t.value = EXEMPLOS[e.target.value]; };
+  const go = async () => {
+    $('msg').textContent = '';
+    const j = await fetch('/api/sql', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sql: t.value }) }).then(r => r.json());
+    if (j.erro) { $('msg').textContent = j.erro; return; }
+    $('res').innerHTML = j.rows.length ? `<div style="color:#66758a;margin-bottom:6px">${j.rows.length} linhas</div>` + tabela(j.colunas.map(c => ({ h: c, k: c, n: typeof j.rows[0][c] === 'number' })), j.rows) : '<p class="sub">Nenhuma linha.</p>';
+  };
+  $('go').onclick = go; t.onkeydown = e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) go(); };
+}
+
+// ───────────────────────── tempo real ─────────────────────────
+function connect() {
+  const es = S.es = new EventSource('/api/stream');
+  es.onopen = () => { $('live').className = 'dot on'; $('live-t').textContent = 'ao vivo'; };
+  es.onerror = () => { $('live').className = 'dot err'; $('live-t').textContent = 'servidor desligado? rode iniciar.bat'; };
+  es.onmessage = () => { clearTimeout(S.timer); S.timer = setTimeout(() => { loadRuns(); if (!['tabelas', 'sql'].includes(S.page)) refresh(); }, 1200); };
+}
+window.addEventListener('hashchange', showPage);
+loadRuns().then(() => { showPage(); connect(); });
+</script>
+</body>
+</html>

@@ -1,0 +1,92 @@
+# Projeto: Potato Line Analytics (portfólio de Engenharia e Análise de Dados)
+
+## Contexto
+Quero construir um projeto de portfólio que simula uma linha de produção de batatas.
+Há uma única esteira: as batatas caem nela, passam por sensores e são classificadas
+como BOA, RUIM ou SUSPEITA. A partir desses dados, quero uma arquitetura medalhão
+(Bronze → Silver → Gold) que entregue informação para gestores responderem perguntas
+sobre a produção.
+
+O objetivo é mostrar a recrutadores boas práticas de engenharia de dados: dados
+realistas com problemas, camadas bem definidas, testes de qualidade, documentação e
+foco em perguntas de negócio.
+
+## Escopo desta etapa (MVP em batch)
+Implemente apenas as fases 1 e 2 abaixo. As demais ficam documentadas no README como
+roadmap, sem implementação.
+
+### Fase 1 — Simulador da esteira (Python)
+Gere eventos, um por batata, com pelo menos estes campos:
+- batata_id (UUID), event_timestamp, linha_id, lote_id, fornecedor_id, turno
+  (A/B/C), operador_id
+- peso_g, diametro_mm, cor_matiz, area_defeito_pct, velocidade_esteira
+- classificacao (BOA | RUIM | SUSPEITA) e confianca (0–1)
+
+Regras de classificação (parametrizáveis em um arquivo de configuração):
+- defeito alto → RUIM; defeito baixo e confiança alta → BOA; confiança baixa → SUSPEITA
+
+Problemas que devem ser injetados de propósito, com taxas configuráveis:
+- eventos duplicados
+- campos nulos e valores fora de faixa (ex.: peso negativo)
+- eventos atrasados ou fora de ordem
+- drift gradual em um sensor (ex.: cor_matiz descalibrando ao longo dos dias)
+- um fornecedor com um lote ruim em uma semana específica
+
+Também gere um segundo conjunto de dados: `inspecao_manual`. Batatas SUSPEITAS recebem
+um rótulo final (BOA/RUIM) algumas horas depois do evento original, simulando dados
+tardios.
+
+Gere também tabelas de dimensão (fornecedores com preço/kg, operadores, turnos).
+
+O simulador deve aceitar parâmetros via CLI (nº de dias, batatas por hora, seed para
+reprodutibilidade) e escrever arquivos Parquet particionados por data em uma pasta
+`data/landing/`.
+
+### Fase 2 — Pipeline medalhão (DuckDB + dbt)
+- **Bronze:** carga dos arquivos exatamente como chegaram, com metadados `_ingested_at`
+  e `_source_file`. Append-only.
+- **Silver:** tipagem, deduplicação por batata_id (mantendo o registro mais recente),
+  validação de faixas, tabela de quarentena para registros inválidos (com o motivo da
+  rejeição), join com dimensões e com a inspeção manual (classificacao_final).
+- **Gold:** um modelo por pergunta de negócio:
+  - `gold_producao_por_hora_turno`: volume e % de BOA/RUIM/SUSPEITA
+  - `gold_qualidade_por_fornecedor_lote`: taxa de refugo e tendência
+  - `gold_perdas_financeiras`: kg descartados × preço/kg, por dia e mês
+  - `gold_desempenho_classificador`: matriz de confusão das SUSPEITAS vs. rótulo final
+  - `gold_saude_sensores`: indicador de drift por sensor (média móvel e desvio)
+
+Use os testes do dbt (unique, not_null, accepted_values, relationships) e pelo menos
+um teste customizado de regra de negócio. Documente os modelos (descriptions no
+schema.yml).
+
+### Consumo
+Um app Streamlit simples, lendo apenas da camada Gold, com uma página por público:
+Gerente de produção, Qualidade, Compras, Diretoria e Manutenção. Cada página responde
+2–3 perguntas explícitas (o título do gráfico é a pergunta).
+
+## Requisitos técnicos
+- Python 3.11+, gerenciamento de dependências com `uv` (ou poetry, se preferir justificar)
+- Orquestração simples via `Makefile` (ex.: `make simulate`, `make build`, `make test`,
+  `make app`, `make all`)
+- Tudo deve rodar localmente com um único comando após clonar o repositório
+- Testes unitários do simulador com pytest
+- GitHub Actions rodando lint (ruff), pytest e `dbt build` com uma amostra pequena
+- Código e nomes de tabelas consistentes; comentários e README em português
+
+## README
+- Problema de negócio e as perguntas que cada gestor quer responder (abrir o README
+  por isso)
+- Diagrama da arquitetura (Mermaid)
+- Descrição de cada camada e das decisões técnicas (por que DuckDB, por que dbt etc.)
+- Catálogo dos problemas de dados injetados e como cada um é tratado
+- Como rodar
+- Roadmap: streaming com Redpanda, orquestração com Airflow/Dagster, modelos de
+  ciência de dados (detecção de drift, previsão de refugo por lote, reclassificação
+  de suspeitas com ML)
+
+## Como quero que você trabalhe
+1. Antes de escrever código, proponha a estrutura de pastas e um plano curto e espere
+   minha aprovação.
+2. Implemente em etapas pequenas e rode os testes ao final de cada etapa.
+3. Se alguma decisão tiver trade-off relevante, me pergunte em vez de assumir.
+4. Ao final, rode `make all` do zero e confirme que tudo funciona.

@@ -1,0 +1,12 @@
+{
+  "name": "potato-erp",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ERP local que recebe os eventos do simulador 3D da linha de batatas e responde perguntas de negócio.",
+  "scripts": {
+    "start": "node --no-warnings server.js"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  }
+}

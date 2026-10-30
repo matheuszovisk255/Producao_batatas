@@ -1,0 +1,3312 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Potato Line 3D</title>
+<style>
+  :root {
+    --bg: #10131a;
+    --panel: rgba(24, 29, 40, 0.88);
+    --line: rgba(255, 255, 255, 0.10);
+    --text: #e9edf3;
+    --muted: #96a0ae;
+    --money: #5ee08a;
+    --loss: #ff6b6b;
+    --accent: #f0b445;
+    --boa: #2fd36b;
+    --ruim: #ff4d4d;
+    --suspeita: #ffc929;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
+    font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; overflow: hidden; }
+  canvas#c { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
+  canvas#c:active { cursor: grabbing; }
+  body.fp canvas#c { cursor: none; }
+
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); box-shadow: 0 6px 24px rgba(0,0,0,.28); }
+
+  #topbar { position: fixed; top: 14px; left: 14px; right: 14px; display: flex; justify-content: space-between;
+    align-items: flex-start; gap: 12px; pointer-events: none; }
+  #topbar > * { pointer-events: auto; }
+  .left { display: grid; gap: 8px; min-width: 200px; }
+
+  .stats small { color: var(--muted); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+
+  .stats { padding: 8px 14px; }
+  #gargalos { border-color: rgba(255,200,60,.35); }
+  .stats ul { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 3px; }
+  .stats li { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; }
+  .stats li b { margin-left: auto; color: var(--text); font-variant-numeric: tabular-nums; }
+  .dot { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+  .dot.boa { background: var(--boa); } .dot.ruim { background: var(--ruim); } .dot.suspeita { background: var(--suspeita); }
+
+  .clock { padding: 8px 16px; display: flex; align-items: center; gap: 12px; }
+  .clock #clk-icon { font-size: 22px; color: var(--accent); width: 26px; text-align: center; }
+  .clock b { display: block; font-size: 18px; font-variant-numeric: tabular-nums; line-height: 1.1; }
+  .clock small { color: var(--muted); font-size: 12px; }
+
+  .speed { padding: 5px; display: flex; gap: 4px; }
+  .speed button { min-width: 42px; padding: 7px 8px; }
+  button { font: inherit; font-size: 12px; color: var(--text); background: rgba(255,255,255,.07);
+    border: 1px solid transparent; border-radius: 7px; padding: 6px 10px; cursor: pointer; }
+  button:hover { background: rgba(255,255,255,.15); }
+  button.on { background: var(--accent); color: #1a1405; font-weight: 700; }
+  button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  #controls { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); padding: 10px 14px;
+    display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; justify-content: center;
+    width: max-content; max-width: calc(100vw - 28px); }
+  #controls label { display: grid; gap: 2px; font-size: 12px; color: var(--muted); }
+  #controls label span b { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+  input[type=range] { width: 130px; accent-color: var(--accent); }
+  .btns { display: flex; gap: 6px; flex-wrap: wrap; }
+
+  #alert { position: fixed; top: 82px; left: 50%; transform: translateX(-50%); padding: 8px 16px; border-radius: 10px; background: rgba(150,30,30,.92);
+    color: #fff; font-weight: 600; font-size: 13px; text-align: center; max-width: calc(100vw - 28px); box-shadow: 0 6px 24px rgba(0,0,0,.4); animation: pulse 1.2s infinite; }
+  @keyframes pulse { 50% { background: rgba(196,52,40,.95); } }
+  #ficha { position: fixed; right: 14px; top: 84px; width: 270px; padding: 10px 12px 12px; z-index: 5; }
+  #ficha[hidden], #gargalos[hidden], #alert[hidden] { display: none; }
+  .f-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .f-head b { font-size: 15px; }
+  .tag { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 99px; background: rgba(255,255,255,.1); }
+  #f-x { margin-left: auto; padding: 2px 8px; }
+  #f-body .r { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,.06); font-size: 12.5px; }
+  #f-body dt { color: var(--muted); flex: none; } #f-body dd { margin: 0; text-align: right; }
+  .c-BOA { color: var(--boa); } .c-RUIM { color: var(--ruim); } .c-SUSPEITA { color: var(--suspeita); } .c-CORPO { color: #ff9d4d; }
+  .tag.c-BOA, .tag.c-RUIM, .tag.c-SUSPEITA, .tag.c-CORPO { background: rgba(255,255,255,.1); }
+  .warn { color: #ff9d9d; font-size: 11px; }
+  #f-follow { width: 100%; margin-top: 10px; padding: 7px; }
+  .stats li.lv1 { color: #ffd76a; } .stats li.lv2 { color: #ff8f8f; }
+  #forn { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(1180px, calc(100vw - 16px)); max-height: 82vh; overflow: auto; padding: 12px 14px 14px; z-index: 6; }
+  #forn[hidden] { display: none; }
+  #forn-x { margin-left: auto; padding: 2px 8px; }
+  #forn-stock { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 0 0 10px; color: var(--muted); font-size: 12.5px; }
+  #forn-stock b { color: var(--text); }
+  #forn table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  #forn th { text-align: left; color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .02em; padding: 4px 4px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  #forn td { padding: 7px 4px; border-bottom: 1px solid rgba(255,255,255,.06); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  #forn td small { color: var(--muted); } #forn tr.off { opacity: .5; }
+  #forn .dot { display: inline-block; margin-right: 6px; vertical-align: middle; }
+  .bar { display: inline-block; width: 30px; height: 5px; background: rgba(255,255,255,.12); border-radius: 3px; margin-left: 6px; vertical-align: middle; overflow: hidden; }
+  .bar i { display: block; height: 100%; }
+  .neg { color: var(--loss); }
+  .verd { padding: 2px 8px; border-radius: 99px; font-size: 11.5px; font-weight: 700; }
+  .v-best { background: rgba(47,211,107,.2); color: #6dff9a; } .v-ok { background: rgba(126,200,255,.18); color: #9fd4ff; }
+  .v-warn { background: rgba(255,201,41,.18); color: #ffd76a; } .v-bad { background: rgba(255,77,77,.2); color: #ff8f8f; } .v-wait { background: rgba(255,255,255,.1); color: var(--muted); }
+  button.sw { min-width: 74px; } button.sw.on { background: rgba(47,211,107,.25); color: #6dff9a; border-color: rgba(47,211,107,.4); }
+  #forn-tip { margin: 10px 0 0; color: var(--muted); font-size: 12.5px; }
+  #dados { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(920px, calc(100vw - 16px)); max-height: 84vh; overflow: auto; padding: 12px 14px 14px; z-index: 6; }
+  #dados[hidden] { display: none; }
+  #dados-x { margin-left: auto; padding: 2px 8px; }
+  #dados-sub { margin: 0 0 10px; color: var(--muted); font-size: 12.5px; } #dados-sub b { color: var(--text); }
+  .d-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 8px 16px; align-items: end; margin-bottom: 10px; }
+  .d-grid label { display: grid; gap: 3px; font-size: 12px; color: var(--muted); } .d-grid label b { color: var(--text); margin-left: 4px; }
+  .d-grid input[type=range] { width: 100%; } .d-grid input[type=number] { background: rgba(255,255,255,.07); color: var(--text); border: 1px solid var(--line); border-radius: 7px; padding: 5px 8px; font: inherit; }
+  .d-grid label.chk { display: flex; align-items: center; gap: 8px; color: var(--text); }
+  .d-actions { display: flex; gap: 8px; margin-bottom: 10px; }
+  .d-scroll { overflow: auto; border: 1px solid var(--line); border-radius: 8px; }
+  #d-prev { border-collapse: collapse; font-size: 11.5px; width: 100%; }
+  #d-prev th { text-align: left; color: var(--muted); font-weight: 600; padding: 5px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  #d-prev td { padding: 4px 8px; border-bottom: 1px solid rgba(255,255,255,.05); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  #d-prev i.nul { color: #ff9d9d; font-style: normal; background: rgba(255,77,77,.15); padding: 0 5px; border-radius: 4px; }
+  #d-note { margin: 10px 0 0; color: var(--muted); font-size: 12px; } #d-note code { color: var(--text); }
+  #toast { position: fixed; left: 50%; bottom: 96px; transform: translate(-50%, 12px); max-width: min(560px, calc(100vw - 32px)); padding: 10px 16px; border-radius: 10px;
+    background: rgba(150,30,30,.95); color: #fff; font-size: 13px; opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s; z-index: 20; box-shadow: 0 8px 28px rgba(0,0,0,.45); }
+  #toast.on { opacity: 1; transform: translate(-50%, 0); }
+  #hint { position: fixed; right: 14px; bottom: 14px; padding: 8px 12px; font-size: 12px; color: var(--muted); max-width: 220px; }
+  #hint .fp-only { display: none; }
+  body.fp #hint .orbit-only, body.fp #controls, body.fp .stats { display: none; }
+  body.fp #hint .fp-only { display: block; }
+  #cross { position: fixed; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%;
+    background: rgba(255,255,255,.8); box-shadow: 0 0 0 1px rgba(0,0,0,.5); display: none; pointer-events: none; }
+  body.fp #cross { display: block; }
+  #erro { position: fixed; inset: 0; display: none; place-items: center; text-align: center; padding: 24px; }
+
+  @media (max-width: 760px) {
+    #hint { display: none; }
+    .clock small { display: none; }
+    input[type=range] { width: 110px; }
+    .speed button { min-width: 34px; padding: 6px; }
+  }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="cross"></div>
+
+<div id="topbar">
+  <div class="left">
+    <div class="stats card">
+      <small>Produção</small>
+      <ul>
+        <li><span class="dot boa"></span>BOA <b id="n-boa">0</b></li>
+        <li><span class="dot ruim"></span>RUIM <b id="n-ruim">0</b></li>
+        <li><span class="dot suspeita"></span>SUSPEITA <b id="n-suspeita">0</b></li>
+        <li><span class="dot" style="background:#ff9d4d"></span>CORPO ESTRANHO <b id="n-corpo">0</b></li>
+        <li><span class="dot" style="background:#d6a24b"></span>SACOS <b id="n-sacos">0</b></li>
+        <li><span class="dot" style="background:#c79a5b"></span>CAIXAS <b id="n-caixas">0</b></li>
+        <li><span class="dot" style="background:#7ec8ff"></span>MATÉRIA-PRIMA <b id="n-estoque">0</b></li>
+        <li><span class="dot" style="background:#e8b82a"></span>EXPEDIÇÃO <b id="n-acabado">0/6</b></li>
+        <li><span class="dot" style="background:#e8731c"></span>ESTOQUE <b id="n-estocado">0/24</b></li>
+        <li><span class="dot" style="background:#9fd4ff"></span>EVENTOS GRAVADOS <b id="n-eventos">0</b></li>
+        <li><span class="dot" style="background:#7ec8ff"></span>ERP <b id="n-erp">offline</b></li>
+        <li><span class="dot" style="background:#8a6a44"></span>PALETES NO CAMINHÃO <b id="n-paletes">0/4</b></li>
+      </ul>
+    </div>
+    <div id="gargalos" class="stats card" hidden><small>Gargalos</small><ul id="g-list"></ul></div>
+  </div>
+  <div class="clock card"><span id="clk-icon">☀</span><div><b id="clk">Seg 09:00</b><small id="clk-day">Dia 1</small></div></div>
+  <div class="speed card" role="group" aria-label="Velocidade do tempo">
+    <button type="button" data-speed="0" title="Pausar (espaço)">⏸</button>
+    <button type="button" data-speed="1" title="Velocidade 1x">▶</button>
+    <button type="button" data-speed="2" title="Velocidade 2x">▶▶</button>
+    <button type="button" data-speed="3" title="Velocidade 3x">▶▶▶</button>
+  </div>
+</div>
+
+<div id="alert" hidden></div>
+
+<div id="dados" class="card" hidden>
+  <div class="f-head"><b>Dados da linha</b><span class="tag">exportação para o pipeline</span><button id="dados-x" type="button" aria-label="Fechar">✕</button></div>
+  <p id="dados-sub"></p>
+  <div class="d-grid">
+    <label class="chk"><input type="checkbox" id="d-inj" checked> Injetar problemas de dados</label>
+    <label>Eventos duplicados <b id="d-dup-v">2%</b><input id="d-dup" type="range" min="0" max="10" step="0.5" value="2"></label>
+    <label>Campos nulos <b id="d-nul-v">3%</b><input id="d-nul" type="range" min="0" max="10" step="0.5" value="3"></label>
+    <label>Valores fora de faixa <b id="d-for-v">1.5%</b><input id="d-for" type="range" min="0" max="10" step="0.5" value="1.5"></label>
+    <label>Eventos atrasados <b id="d-atr-v">4%</b><input id="d-atr" type="range" min="0" max="15" step="0.5" value="4"></label>
+    <label>Semente <input id="d-seed" type="number" value="20260105"></label>
+  </div>
+  <div class="d-actions"><button id="d-zip" type="button" class="on">Baixar pacote (.zip)</button><button id="d-clear" type="button">Limpar histórico</button></div>
+  <div class="d-scroll"><table id="d-prev"></table></div>
+  <p id="d-note">O pacote traz <code>landing/eventos</code> e <code>landing/inspecao_manual</code> particionados por data, as dimensões, <code>manifest.json</code> (semente, taxas e catálogo de problemas) e um conversor para Parquet. A deriva do sensor e a qualidade por fornecedor já acontecem na própria fábrica.</p>
+</div>
+
+<div id="forn" class="card" hidden>
+  <div class="f-head"><b>Fornecedores</b><span class="tag">estatísticas da linha</span><button id="forn-x" type="button" aria-label="Fechar">✕</button></div>
+  <div id="forn-stock"></div>
+  <table>
+    <thead><tr><th>Fornecedor</th><th>Process.</th><th>BOA</th><th>RUIM</th><th>Susp.</th><th>Corpo</th><th>Aproveit.</th><th>Veredito</th><th>Contrato</th></tr></thead>
+    <tbody id="forn-body"></tbody>
+  </table>
+  <p id="forn-tip"></p>
+</div>
+
+<div id="ficha" class="card" hidden>
+  <div class="f-head"><b id="f-title">Batata</b><span id="f-tag" class="tag"></span><button id="f-x" type="button" aria-label="Fechar ficha">✕</button></div>
+  <dl id="f-body" style="margin:0"></dl>
+  <button id="f-follow" type="button">Seguir esta batata</button>
+</div>
+
+<div id="hint" class="card">
+  <span class="orbit-only">Arraste para girar · botão direito (ou Shift) move · roda dá zoom · clique numa batata para ver a ficha · F para andar pelo galpão</span>
+  <span class="fp-only">WASD mover · Shift correr · mouse olhar · clique na mira para ver a ficha · F ou Esc para sair</span>
+</div>
+
+<div id="controls" class="card">
+  <label><span>Velocidade da esteira <b id="v-speed">1.4</b></span>
+    <input id="speed" type="range" min="0" max="3" step="0.1" value="1.4"></label>
+  <label><span>Batatas por segundo <b id="v-rate">1.5</b></span>
+    <input id="rate" type="range" min="0.3" max="4" step="0.1" value="1.5"></label>
+  <div class="btns">
+    <button type="button" data-view="geral">Visão geral</button>
+    <button type="button" data-view="sensor">Sensor</button>
+    <button type="button" data-view="triagem">Triagem</button>
+    <button type="button" data-view="qualidade">Qualidade</button>
+    <button type="button" data-view="lavagem">Lavagem</button>
+    <button type="button" data-view="expedicao">Expedição</button>
+    <button type="button" data-view="estoque">Estoque</button>
+    <button type="button" data-view="recebimento">Recebimento</button>
+    <button type="button" id="forn-btn">Fornecedores (T)</button>
+    <button type="button" id="dados-btn">Dados (D)</button>
+    <button type="button" id="erp-btn" title="Abre o ERP (precisa do servidor rodando)">ERP ↗</button>
+    <button type="button" id="walk">Andar (F)</button>
+  </div>
+</div>
+
+<div id="erro">Não foi possível carregar o Three.js (lib/three.min.js).</div>
+
+<script src="lib/three.min.js"></script>
+<script>
+(() => {
+'use strict';
+
+if (typeof THREE === 'undefined') { document.getElementById('erro').style.display = 'grid'; return; }
+
+// sRGB -> linear, para as cores ficarem como escritas com outputEncoding sRGB
+const col = hex => new THREE.Color(hex).convertSRGBToLinear();
+const rand = (a, b) => a + Math.random() * (b - a);
+const pick = arr => arr[(Math.random() * arr.length) | 0];
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+
+// ───────────────────────── Configuração ─────────────────────────
+const CFG = {
+  beltTop: 1.1,        // altura da superfície da esteira
+  beltHalfW: 0.9,      // meia largura da esteira (eixo z)
+  beltX0: -7.0, beltX1: 7.0,
+  spawnX: -6.2,        // x do funil de entrada
+  sensorX: -2.0,       // x do pórtico de sensores
+  endX: 7.1,           // x onde a batata cai da ponta da esteira
+  binFloor: 0.45,      // altura do fundo das caixas
+  binWall: 0.95,       // altura da borda das caixas
+  binCap: 60,          // máx. de batatas visíveis por caixa
+  maxLive: 90,
+  gravity: 9.8,
+  tile: 1.2,           // comprimento (m) de um "tile" da textura da esteira
+  probs: { BOA: 0.62, RUIM: 0.18, SUSPEITA: 0.14, CORPO: 0.06 },   // CORPO = pedra/torrão misturado
+};
+const CLASSES = {
+  BOA:      { hex: 0x2fd36b },
+  RUIM:     { hex: 0xff4d4d },
+  SUSPEITA: { hex: 0xffc929 },
+};
+const sim = { speed: 1, beltSpeed: 1.4, rate: 1.5 };
+const counts = { BOA: 0, RUIM: 0, SUSPEITA: 0, CORPO: 0 };
+
+// ───────────────────────── Cena / renderer ─────────────────────────
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.15;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+const scene = new THREE.Scene();
+scene.background = col(0x10131a);
+scene.fog = new THREE.Fog(col(0x10131a), 20, 48);
+
+const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+
+const hemi = new THREE.HemisphereLight(0xcfdcff, 0x2b2420, 0.65);
+scene.add(hemi);
+const sun = new THREE.DirectionalLight(0xfff0dd, 1.0);
+sun.position.set(5, 10, 6);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -13, right: 13, top: 8, bottom: -8, near: 1, far: 30 });
+sun.shadow.bias = -0.0006;
+scene.add(sun);
+const fill = new THREE.DirectionalLight(0x8fb0ff, 0.28);
+fill.position.set(-6, 5, -6);
+scene.add(fill);
+
+const scanLight = new THREE.PointLight(0xff3030, 0, 3.5, 2);
+scanLight.position.set(CFG.sensorX, CFG.beltTop + 0.8, 0);
+scene.add(scanLight);
+
+// ───────────────────────── Materiais / texturas ─────────────────────────
+function canvasTex(w, h, draw, opts = {}) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c);
+  t.encoding = THREE.sRGBEncoding;
+  if (opts.repeat) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(opts.repeat[0], opts.repeat[1]); }
+  t.anisotropy = 8;
+  return t;
+}
+
+const M = {
+  steel:  new THREE.MeshStandardMaterial({ color: col(0x8a94a0), metalness: 0.7, roughness: 0.4 }),
+  dark:   new THREE.MeshStandardMaterial({ color: col(0x2a2e35), metalness: 0.4, roughness: 0.6 }),
+  frame:  new THREE.MeshStandardMaterial({ color: col(0xd9a21b), metalness: 0.3, roughness: 0.55 }), // amarelo industrial
+  rubber: new THREE.MeshStandardMaterial({ color: col(0x1b1d21), roughness: 0.95 }),
+  wood:   new THREE.MeshStandardMaterial({ color: col(0x8a6a44), roughness: 0.9 }),
+};
+
+// ───────────────────────── Cenário: galpão em Nova York ─────────────────────────
+const ROOM = { x: 16, z: 10, h: 9 };
+const OBST = [];                                       // retângulos sólidos (usados no modo caminhar)
+const solid = (x0, x1, z0, z1) => OBST.push({ x0, x1, z0, z1 });
+const still = o => { o.updateMatrix(); o.matrixAutoUpdate = false; return o; };
+const tiled = (tex, w, h) => { const t = tex.clone(); t.needsUpdate = true; t.repeat.set(w, h); return t; };
+
+solid(-7.4, 7.4, -1.2, 1.2);                           // esteira
+solid(-7.3, -5.1, -1.95, 1.95);                        // funil
+
+// chão de concreto
+const floorTex = canvasTex(256, 256, (g, w, h) => {
+  g.fillStyle = '#3a3e45'; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < 1400; i++) { g.fillStyle = `rgba(255,255,255,${Math.random() * 0.035})`; g.fillRect(Math.random() * w, Math.random() * h, 2, 2); }
+  for (let i = 0; i < 500; i++) { g.fillStyle = `rgba(0,0,0,${Math.random() * 0.05})`; g.fillRect(Math.random() * w, Math.random() * h, 3, 2); }
+  g.strokeStyle = '#2a2d33'; g.lineWidth = 3; g.strokeRect(0, 0, w, h);
+}, { repeat: [16, 10] });
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(60, 40), new THREE.MeshStandardMaterial({ map: floorTex, roughness: 0.85 }));
+floor.rotation.x = -Math.PI / 2;
+floor.receiveShadow = true;
+scene.add(floor);
+
+// faixas amarelas de segurança
+for (const z of [-4.6]) {
+  const s = new THREE.Mesh(new THREE.PlaneGeometry(26, 0.12), new THREE.MeshStandardMaterial({ color: col(0xd9a21b), roughness: 0.8 }));
+  s.rotation.x = -Math.PI / 2; s.position.set(0, 0.005, z); s.receiveShadow = true; scene.add(still(s));
+}
+
+// rua lá fora (porta de carga)
+{
+  const street = new THREE.Mesh(new THREE.PlaneGeometry(26, 40), new THREE.MeshStandardMaterial({ color: col(0x25272c), roughness: 0.95 }));
+  street.rotation.x = -Math.PI / 2; street.position.set(29, 0.004, 0); street.receiveShadow = true; scene.add(still(street));
+}
+
+// tijolo aparente
+const brickTex = canvasTex(256, 256, (g, w, h) => {
+  g.fillStyle = '#a79f94'; g.fillRect(0, 0, w, h);
+  for (let row = 0; row < 16; row++) {
+    const off = (row % 2) * 32;
+    for (let bx = -1; bx < 5; bx++) {
+      const k = 120 + Math.random() * 50;
+      g.fillStyle = `rgb(${k | 0},${(k * 0.42) | 0},${(k * 0.32) | 0})`;
+      g.fillRect(bx * 64 + off + 2, row * 16 + 2, 60, 12);
+    }
+  }
+  for (let i = 0; i < 1200; i++) { g.fillStyle = `rgba(0,0,0,${Math.random() * 0.08})`; g.fillRect(Math.random() * w, Math.random() * h, 2, 2); }
+}, { repeat: [1, 1] });
+
+function wallPlane(w, h, x, y, z, ry) {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map: tiled(brickTex, w, h), roughness: 0.95 }));
+  m.position.set(x, y, z); m.rotation.y = ry; m.receiveShadow = true;
+  scene.add(still(m)); return m;
+}
+const steel = (w, h, d, x, y, z, mat = M.dark) => {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+  m.position.set(x, y, z); scene.add(still(m)); return m;
+};
+
+// parede do fundo: janelões industriais com a skyline atrás
+wallPlane(32, 2.5, 0, 1.25, -10, 0);
+wallPlane(32, 1.0, 0, 8.5, -10, 0);
+const WIN_STEP = 4.3;
+for (const cx of [-15.3, 15.3]) wallPlane(1.4, 5.5, cx, 5.25, -10, 0);
+for (let i = -3; i <= 2; i++) wallPlane(0.9, 5.5, i * WIN_STEP + WIN_STEP / 2, 5.25, -10, 0);
+for (let i = -3; i <= 3; i++) {
+  const cx = i * WIN_STEP;
+  for (const y of [2.5, 4.35, 6.2, 8.0]) steel(3.4, 0.08, 0.12, cx, y, -9.95);
+  for (const dx of [-1.7, 0, 1.7]) steel(0.07, 5.5, 0.12, cx + dx, 5.25, -9.95);
+  steel(3.6, 0.1, 0.3, cx, 2.45, -9.85, M.steel);                       // peitoril
+}
+
+// skyline (dia / noite), com um arranha-céu em degraus ao fundo
+function skyTex(night) {
+  return canvasTex(2048, 352, (g, w, h) => {
+    const gr = g.createLinearGradient(0, 0, 0, h);
+    if (night) { gr.addColorStop(0, '#050816'); gr.addColorStop(1, '#27324f'); }
+    else { gr.addColorStop(0, '#4f93d6'); gr.addColorStop(1, '#d3e8f6'); }
+    g.fillStyle = gr; g.fillRect(0, 0, w, h);
+    const lit = (x, y, bw, bh) => {
+      for (let wy = y + 6; wy < y + bh - 6; wy += 11) for (let wx = x + 5; wx < x + bw - 6; wx += 9) {
+        if (night) { if (Math.random() < 0.38) { g.fillStyle = Math.random() < 0.8 ? '#ffd88a' : '#9fd4ff'; g.fillRect(wx, wy, 4, 6); } }
+        else if (Math.random() < 0.5) { g.fillStyle = 'rgba(255,255,255,0.14)'; g.fillRect(wx, wy, 4, 6); }
+      }
+    };
+    const layers = [
+      { c: night ? '#101733' : '#a9c1d4', hMin: 50, hMax: 150, wMin: 40, wMax: 100 },
+      { c: night ? '#0b1129' : '#86a2ba', hMin: 80, hMax: 220, wMin: 50, wMax: 120 },
+      { c: night ? '#070b1c' : '#62809a', hMin: 100, hMax: 270, wMin: 60, wMax: 140 },
+    ];
+    layers.forEach((L, li) => {
+      let x = -20;
+      while (x < w) {
+        const bw = L.wMin + Math.random() * (L.wMax - L.wMin), bh = L.hMin + Math.random() * (L.hMax - L.hMin);
+        g.fillStyle = L.c; g.fillRect(x, h - bh, bw, bh);
+        if (li > 0) lit(x, h - bh, bw, bh);
+        x += bw + 3;
+      }
+      if (li === 1) {                                                     // torre em degraus
+        const cx = 1400;
+        g.fillStyle = L.c;
+        for (const [dx, bw, bh] of [[-64, 128, 190], [-44, 88, 235], [-30, 60, 275], [-16, 32, 305], [-5, 10, 335]]) g.fillRect(cx + dx, h - bh, bw, bh);
+        g.fillRect(cx - 1, h - 350, 2, 20);
+        lit(cx - 64, h - 190, 128, 190);
+      }
+    });
+  });
+}
+const skyG = new THREE.PlaneGeometry(32, 5.5);
+const skyNight = new THREE.Mesh(skyG, new THREE.MeshBasicMaterial({ map: skyTex(true), fog: false }));
+const skyDay = new THREE.Mesh(skyG, new THREE.MeshBasicMaterial({ map: skyTex(false), transparent: true, fog: false }));
+const skyDusk = new THREE.Mesh(skyG, new THREE.MeshBasicMaterial({ color: 0xff7a30, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, fog: false, depthWrite: false }));
+skyNight.position.set(0, 5.25, -10.4); skyDay.position.set(0, 5.25, -10.39); skyDusk.position.set(0, 5.25, -10.38);
+scene.add(skyNight, skyDay, skyDusk);
+
+// parede esquerda (com letreiro neon), frontal e direita (com porta de carga)
+wallPlane(13.6, 9, -16, 4.5, -3.2, Math.PI / 2);
+wallPlane(3.9, 9, -16, 4.5, 8.05, Math.PI / 2);
+wallPlane(2.5, 5.4, -16, 6.3, 4.85, Math.PI / 2);
+steel(0.3, 3.6, 0.16, -15.9, 1.8, 3.6, M.frame); steel(0.3, 3.6, 0.16, -15.9, 1.8, 6.1, M.frame);
+steel(0.35, 0.3, 2.8, -15.9, 3.75, 4.85, M.frame);
+steel(0.4, 0.5, 2.5, -15.8, 3.35, 4.85, M.steel);
+{
+  const tx = canvasTex(320, 80, (g, w, h) => {
+    g.fillStyle = '#2d6a3a'; g.fillRect(0, 0, w, h); g.strokeStyle = '#d7ffe0'; g.lineWidth = 5; g.strokeRect(5, 5, w - 10, h - 10);
+    g.fillStyle = '#fff'; g.font = '800 40px system-ui, "Segoe UI", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('RECEBIMENTO', w / 2, h / 2 + 2);
+  });
+  const sg = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 0.55), new THREE.MeshBasicMaterial({ map: tx })); sg.position.set(-15.93, 4.3, 4.85); sg.rotation.y = Math.PI / 2; scene.add(still(sg));
+}
+wallPlane(32, 9, 0, 4.5, 10, Math.PI);
+wallPlane(7.45, 9, 16, 4.5, -6.275, -Math.PI / 2);
+wallPlane(10.05, 9, 16, 4.5, 4.975, -Math.PI / 2);
+wallPlane(2.5, 5.4, 16, 6.3, -1.3, -Math.PI / 2);
+steel(0.3, 3.6, 0.16, 15.9, 1.8, -2.55, M.frame); steel(0.3, 3.6, 0.16, 15.9, 1.8, -0.05, M.frame);
+steel(0.35, 0.3, 2.8, 15.9, 3.75, -1.3, M.frame);
+steel(0.4, 0.5, 2.5, 15.8, 3.35, -1.3, M.steel);                          // rolo da porta
+
+// teto + tesouras de aço
+{
+  const ceil = new THREE.Mesh(new THREE.PlaneGeometry(32, 20), new THREE.MeshStandardMaterial({ color: col(0x23262c), roughness: 1 }));
+  ceil.rotation.x = Math.PI / 2; ceil.position.y = ROOM.h; scene.add(still(ceil));
+  for (const x of [-12, -6, 0, 6, 12]) steel(0.25, 0.45, 19.6, x, 8.75, 0);
+  for (const z of [-4, 4]) steel(31.5, 0.3, 0.3, 0, 8.45, z);
+}
+
+// luminárias industriais
+const lampLights = [];
+for (const x of [-9, -3, 3, 9]) {
+  for (const z of [-4, 4]) {
+    const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 1.7, 6), M.dark); rod.position.set(x, 7.6, z); scene.add(still(rod));
+    const shade = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.55, 0.3, 18, 1, true), new THREE.MeshStandardMaterial({ color: col(0x2b3a2f), roughness: 0.5, metalness: 0.4, side: THREE.DoubleSide }));
+    shade.position.set(x, 6.85, z); scene.add(still(shade));
+    const bulb = new THREE.Mesh(new THREE.CircleGeometry(0.4, 16), new THREE.MeshBasicMaterial({ color: col(0xfff0d0) }));
+    bulb.rotation.x = Math.PI / 2; bulb.position.set(x, 6.71, z); scene.add(still(bulb));
+  }
+  const pl = new THREE.PointLight(0xffe2b8, 1.3, 17, 2);
+  pl.position.set(x, 6.4, 0); scene.add(pl); lampLights.push(pl);
+}
+
+// letreiro neon
+{
+  const tex = canvasTex(512, 160, (g, w, h) => {
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.shadowColor = '#ffa43a'; g.shadowBlur = 18; g.fillStyle = '#ffe2b0';
+    g.font = '800 70px system-ui, "Segoe UI", sans-serif'; g.fillText('BATATA & CIA.', w / 2, 62);
+    g.shadowColor = '#4fd8ff'; g.fillStyle = '#c8f2ff';
+    g.font = '600 26px system-ui, "Segoe UI", sans-serif'; g.fillText('QUEENS  ·  NEW YORK', w / 2, 122);
+  });
+  const sign = new THREE.Mesh(new THREE.PlaneGeometry(4.6, 1.44), new THREE.MeshBasicMaterial({ map: tex, transparent: true }));
+  sign.position.set(-15.9, 5.2, -2); sign.rotation.y = Math.PI / 2; scene.add(still(sign));
+  steel(0.08, 1.6, 4.8, -15.97, 5.2, -2, M.dark);
+}
+
+// caixas de papelão, paletes e prateleiras
+const boxTex = canvasTex(128, 128, (g, w, h) => {
+  g.fillStyle = '#b98a57'; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < 500; i++) { g.fillStyle = `rgba(60,35,10,${Math.random() * 0.06})`; g.fillRect(Math.random() * w, Math.random() * h, 3, 1); }
+  g.fillStyle = '#d8c39a'; g.fillRect(w / 2 - 7, 0, 14, h);
+  g.fillStyle = '#f1ede4'; g.fillRect(14, 70, 40, 34);
+  g.fillStyle = '#555'; for (let i = 0; i < 4; i++) g.fillRect(18, 76 + i * 7, 30 - (i % 2) * 8, 2);
+  g.strokeStyle = 'rgba(60,35,10,.5)'; g.lineWidth = 3; g.strokeRect(0, 0, w, h);
+});
+const boxMats = [
+  new THREE.MeshStandardMaterial({ map: boxTex, roughness: 0.9 }),
+  new THREE.MeshStandardMaterial({ map: boxTex, color: col(0xd2b895), roughness: 0.9 }),
+];
+const unitBox = new THREE.BoxGeometry(1, 1, 1);
+function carton(x, y, z, w, h, d, ry, parent) {
+  const m = new THREE.Mesh(unitBox, pick(boxMats));
+  m.scale.set(w, h, d); m.position.set(x, y + h / 2, z); m.rotation.y = ry || 0;
+  m.castShadow = true; m.receiveShadow = true;
+  if (parent) parent.add(m); else scene.add(still(m));
+  return m;
+}
+
+function pallet(x, z, ry, layers) {
+  const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = ry;
+  const deck = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.04, 1.0), M.wood); deck.position.y = 0.14; deck.castShadow = true; deck.receiveShadow = true; g.add(deck);
+  for (const dz of [-0.4, 0, 0.4]) { const r = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.1, 0.1), M.wood); r.position.set(0, 0.07, dz); g.add(r); }
+  for (let l = 0; l < layers; l++) for (const ix of [-0.3, 0.3]) for (const iz of [-0.25, 0.25])
+    carton(ix, 0.16 + l * 0.42, iz, 0.55, 0.4, 0.45, rand(-0.05, 0.05), g);
+  scene.add(still(g));
+  solid(x - 0.7, x + 0.7, z - 0.65, z + 0.65);
+}
+function rack(cx, cz, len) {
+  const orange = new THREE.MeshStandardMaterial({ color: col(0xe8731c), metalness: 0.3, roughness: 0.5 });
+  const blue = new THREE.MeshStandardMaterial({ color: col(0x2a62c9), metalness: 0.3, roughness: 0.5 });
+  const g = new THREE.Group(); g.position.set(cx, 0, cz);
+  const bx = (w, h, d, mat, x, y, z) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+    m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true; g.add(m); return m;
+  };
+  for (let k = 0; k <= 2; k++) for (const s of [-1, 1]) bx(0.08, 3.7, 0.08, orange, -len / 2 + k * len / 2, 1.85, s * 0.48);
+  for (const y of [0.45, 1.65, 2.85]) {
+    for (const s of [-1, 1]) bx(len, 0.1, 0.06, blue, 0, y, s * 0.48);
+    bx(len, 0.03, 1.0, M.wood, 0, y + 0.06, 0);
+    for (let x = -len / 2 + 0.45; x < len / 2 - 0.4; x += 0.95) {
+      if (Math.random() < 0.15) continue;
+      carton(x, y + 0.075, rand(-0.08, 0.08), rand(0.5, 0.8), rand(0.45, 0.95), rand(0.55, 0.8), rand(-0.08, 0.08), g);
+    }
+  }
+  scene.add(still(g));
+  solid(cx - len / 2 - 0.1, cx + len / 2 + 0.1, cz - 0.6, cz + 0.6);
+}
+
+// caminhão de entrega na porta de carga (carroceria oca: a empilhadeira entra e deixa os paletes)
+const TRUCK = { g: new THREE.Group(), dockX: 16.4, state: 'away', t: 0, count: 0, cap: 4, pallets: [] };
+{
+  const tg = TRUCK.g; tg.position.set(TRUCK.dockX + 60, 0, -1.3);
+  const white = new THREE.MeshStandardMaterial({ color: col(0xe9edf2), roughness: 0.5, metalness: 0.1 });
+  const floorM = new THREE.MeshStandardMaterial({ color: col(0x5b5f66), roughness: 0.8 });
+  const part = (w, h, d, x, y, z, mat) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+    m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true; tg.add(m); return m;
+  };
+  part(6, 0.1, 2.5, 3, 0.8, 0, floorM);                       // piso da carroceria (topo em y = 0.85)
+  part(6, 0.1, 2.5, 3, 3.6, 0, white);                        // teto
+  part(6, 2.8, 0.1, 3, 2.2, 1.2, white); part(6, 2.8, 0.1, 3, 2.2, -1.2, white);
+  part(0.1, 2.8, 2.5, 6, 2.2, 0, white);                      // parede da frente
+  part(2.2, 2.3, 2.4, 7.2, 1.75, 0, new THREE.MeshStandardMaterial({ color: col(0x2a5fa8), roughness: 0.45, metalness: 0.25 }));
+  const glass = new THREE.Mesh(new THREE.BoxGeometry(0.05, 1.0, 2.0), new THREE.MeshStandardMaterial({ color: col(0x0d1218), roughness: 0.1, metalness: 0.8 }));
+  glass.position.set(8.32, 2.3, 0); tg.add(glass);
+  for (const [x, z] of [[1.2, 1.3], [1.2, -1.3], [5, 1.3], [5, -1.3], [7.3, 1.3], [7.3, -1.3]]) {
+    const w = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.32, 20), M.rubber); w.rotation.x = Math.PI / 2; w.position.set(x, 0.5, z); tg.add(w);
+  }
+  for (const z of [-0.8, 0.8]) {
+    const hl = new THREE.Mesh(new THREE.SphereGeometry(0.14, 12, 8), new THREE.MeshBasicMaterial({ color: col(0xfff1b8) })); hl.position.set(8.3, 1.05, z); tg.add(hl);
+  }
+  const logo = canvasTex(512, 160, (g, w, h) => {
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillStyle = '#d6322b'; g.font = '800 70px system-ui, "Segoe UI", sans-serif'; g.fillText('BATATA & CIA.', w / 2, 70);
+    g.fillStyle = '#394150'; g.font = '600 28px system-ui, "Segoe UI", sans-serif'; g.fillText('ENTREGAS EXPRESSAS · NYC', w / 2, 124);
+  });
+  for (const s of [1, -1]) {
+    const lp = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 1.31), new THREE.MeshBasicMaterial({ map: logo, transparent: true }));
+    lp.position.set(3, 2.2, s * 1.26); lp.rotation.y = s > 0 ? 0 : Math.PI; tg.add(lp);
+  }
+  const inLight = new THREE.PointLight(0xfff0dd, 0.8, 5, 2); inLight.position.set(3, 3.1, 0); tg.add(inLight);
+  scene.add(tg);
+}
+
+// ciclo dia/noite
+function applyDay(hours) {
+  const t = (hours - 6) / 13;                                   // 6h nascer · 19h pôr do sol
+  const elev = t > 0 && t < 1 ? Math.sin(Math.PI * t) : 0;
+  const day = smooth(0, 0.3, elev);
+  sun.position.set(-Math.cos(Math.PI * clamp(t, 0, 1)) * 14, 2 + elev * 10, 5);
+  sun.intensity = 0.6 * day;
+  sun.color.copy(new THREE.Color(0xff9a55).lerp(new THREE.Color(0xfff0dd), smooth(0, 0.5, elev)));
+  hemi.intensity = 0.2 + 0.42 * day;
+  hemi.color.copy(new THREE.Color(0x6a78b0).lerp(new THREE.Color(0xcfdcff), day));
+  fill.intensity = 0.22;
+  for (const l of lampLights) l.intensity = 1.5 - 0.35 * day;
+  skyDay.material.opacity = day;
+  skyDusk.material.opacity = 0.38 * Math.max(0, 1 - Math.abs(hours - 6.3) / 1.4, 1 - Math.abs(hours - 19.2) / 1.6);
+  scene.background.copy(col(0x080b14)).lerp(col(0x1d2531), day);
+  scene.fog.color.copy(scene.background);
+}
+
+// ───────────────────────── Esteiras ─────────────────────────
+const beltW = CFG.beltHalfW * 2;
+const beltBase = canvasTex(256, 64, (g, w, h) => {
+  g.fillStyle = '#26282d'; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < 700; i++) { g.fillStyle = `rgba(255,255,255,${Math.random() * 0.035})`; g.fillRect(Math.random() * w, Math.random() * h, 2, 1); }
+  g.fillStyle = '#3a3d44'; g.fillRect(0, 0, 10, h);       // travessa (cleat)
+  g.fillStyle = '#1a1b1f'; g.fillRect(10, 0, 4, h);
+}, { repeat: [1, 1] });
+
+const rollers = [];
+const beltAnim = [];
+
+// monta uma esteira reta. axis 'x': move para +x; axis 'z': move para +z
+function buildBelt(cx, cz, len, wid, axis, opts = {}) {
+  const alongX = axis === 'x';
+  const dims = (l, h, w) => alongX ? [l, h, w] : [w, h, l];
+  const tex = tiled(beltBase, len / CFG.tile, 1);
+  const geo = new THREE.PlaneGeometry(len, wid); geo.rotateX(-Math.PI / 2);
+  if (!alongX) geo.rotateY(-Math.PI / 2);
+  const top = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: tex, roughness: 0.92 }));
+  top.position.set(cx, CFG.beltTop + 0.002, cz); top.receiveShadow = true; scene.add(top);
+  beltAnim.push({ tex, id: opts.id });
+
+  const body = new THREE.Mesh(new THREE.BoxGeometry(...dims(len, 0.06, wid)), M.rubber);
+  body.position.set(cx, CFG.beltTop - 0.032, cz); scene.add(body);
+  const ret = new THREE.Mesh(new THREE.BoxGeometry(...dims(len, 0.04, wid)), M.rubber);
+  ret.position.set(cx, CFG.beltTop - 0.34, cz); scene.add(ret);
+
+  for (const s of [-1, 1]) {                                              // rolos nas pontas
+    const off = s * (len / 2 - 0.17);
+    const r = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.17, wid + 0.12, 24), M.steel);
+    if (alongX) { r.rotation.x = Math.PI / 2; r.position.set(cx + off, CFG.beltTop - 0.17, cz); }
+    else { r.rotation.z = Math.PI / 2; r.position.set(cx, CFG.beltTop - 0.17, cz + off); }
+    for (const a of [0, Math.PI]) {
+      const strip = new THREE.Mesh(new THREE.BoxGeometry(0.03, wid + 0.14, 0.07), M.dark);
+      strip.position.set(Math.cos(a) * 0.17, 0, Math.sin(a) * 0.17); strip.rotation.y = -a; r.add(strip);
+    }
+    r.userData.id = opts.id; scene.add(r); rollers.push(r);
+  }
+
+  const lat = wid / 2 + 0.1;                                              // vigas laterais + pés
+  for (const s of [-1, 1]) {
+    if (opts.skip && opts.skip.includes(s)) continue;
+    const beam = new THREE.Mesh(new THREE.BoxGeometry(...dims(len + 0.3, 0.2, 0.1)), M.frame);
+    beam.position.set(alongX ? cx : cx + s * lat, 0.9, alongX ? cz + s * lat : cz);
+    beam.castShadow = true; beam.receiveShadow = true; scene.add(beam);
+  }
+  for (let d = -len / 2 + 0.5; d <= len / 2 - 0.3; d += 2.4) {
+    for (const s of [-1, 1]) {
+      if (opts.skip && opts.skip.includes(s)) continue;
+      const px = alongX ? cx + d : cx + s * lat, pz = alongX ? cz + s * lat : cz + d;
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.8, 0.1), M.frame);
+      leg.position.set(px, 0.4, pz); leg.castShadow = true; scene.add(leg);
+      const foot = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.04, 0.3), M.dark);
+      foot.position.set(px, 0.02, pz); scene.add(foot);
+    }
+    if (!opts.skip) {
+      const cross = new THREE.Mesh(new THREE.BoxGeometry(...dims(0.07, 0.07, wid + 0.2)), M.frame);
+      cross.position.set(alongX ? cx + d : cx, 0.3, alongX ? cz : cz + d); scene.add(cross);
+    }
+  }
+}
+
+// faixas por onde as batatas andam: dx/dz = sentido; c = linha central lateral (z se dx, x se dz)
+const LANES = {
+  main: { dx: 1, dz: 0, c: 0,   x0: -7,  x1: 8.0,  z0: -0.9, z1: 0.9, hw: 0.9 },   // esteira principal (sensor + triagem)
+  b:    { dx: 0, dz: 1, c: 8.9, x0: 8.0, x1: 9.8,  z0: -0.9, z1: 5.5, hw: 0.9 },   // curva das BOAS em direção à lavagem
+  q:    { dx: 0, dz: 1, c: 4.2, x0: 3.3, x1: 5.1,  z0: 1.15, z1: 5.5, hw: 0.9 },   // SUSPEITAS até a sala de qualidade
+  c:    { dx: 1, dz: 0, c: 6.4, x0: 3.3, x1: 12.9, z0: 5.5,  z1: 7.3, hw: 0.9 },   // lavagem → embalagem
+};
+buildBelt(0.5, 0, 15, beltW, 'x', { id: 'main' });
+buildBelt(8.9, 2.3, 6.4, beltW, 'z', { skip: [-1], id: 'b' });
+buildBelt(4.2, 3.325, 4.35, beltW, 'z', { id: 'q' });
+buildBelt(8.1, 6.4, 9.6, beltW, 'x', { id: 'c' });
+solid(-7.4, 8.2, -1.2, 1.2);          // esteira principal
+solid(7.8, 10.0, -1.2, 5.6);          // curva
+solid(3.2, 5.2, 1.1, 5.6);            // esteira da qualidade
+solid(3.2, 13.1, 5.4, 7.4);           // esteira de lavagem/embalagem
+
+// ───────────────────────── Funil de entrada ─────────────────────────
+{
+  const hopperGeo = new THREE.CylinderGeometry(1.7, 0.8, 1.3, 4, 1, true);
+  hopperGeo.rotateY(Math.PI / 4);
+  const hopper = new THREE.Mesh(hopperGeo, new THREE.MeshStandardMaterial({
+    color: col(0x6a7b8c), metalness: 0.6, roughness: 0.45, side: THREE.DoubleSide }));
+  hopper.scale.set(0.75, 1, 1.45);
+  hopper.position.set(CFG.spawnX, CFG.beltTop + 1.2 + 0.65, 0);
+  hopper.castShadow = true;
+  scene.add(hopper);
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+    const post = new THREE.Mesh(new THREE.BoxGeometry(0.1, 3.3, 0.1), M.frame);
+    post.position.set(CFG.spawnX + sx * 0.98, 1.65, sz * 1.78);
+    post.castShadow = true; scene.add(post);
+  }
+  for (const sz of [-1, 1]) {
+    const bar = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.08, 0.08), M.frame);
+    bar.position.set(CFG.spawnX, 2.7, sz * 1.78); scene.add(bar);
+  }
+}
+
+// ───────────────────────── Caixas de destino ─────────────────────────
+function makeBin(cx, cz, lenX, lenZ, hex) {
+  const g = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ color: col(hex), metalness: 0.2, roughness: 0.6 });
+  const t = 0.08, hWall = CFG.binWall - CFG.binFloor;
+  const add = (w, h, d, x, y, z, m) => {
+    const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
+    b.position.set(x, y, z); b.castShadow = true; b.receiveShadow = true; g.add(b); return b;
+  };
+  add(lenX, 0.3, lenZ, 0, 0.15, 0, M.wood);                               // palete
+  add(lenX, 0.1, lenZ, 0, CFG.binFloor - 0.05, 0, M.dark);                // fundo
+  const yW = CFG.binFloor + hWall / 2;
+  add(lenX, hWall, t, 0, yW, lenZ / 2 - t / 2, mat);
+  add(lenX, hWall, t, 0, yW, -lenZ / 2 + t / 2, mat);
+  add(t, hWall, lenZ, lenX / 2 - t / 2, yW, 0, mat);
+  add(t, hWall, lenZ, -lenX / 2 + t / 2, yW, 0, mat);
+  g.position.set(cx, 0, cz);
+  scene.add(g);
+  solid(cx - lenX / 2, cx + lenX / 2, cz - lenZ / 2, cz + lenZ / 2);
+  return {
+    cx, cz, floor: CFG.binFloor, wallTop: CFG.binWall,
+    x0: cx - lenX / 2 + t, x1: cx + lenX / 2 - t,
+    z0: cz - lenZ / 2 + t, z1: cz + lenZ / 2 - t,
+    items: [],
+    pile() { return Math.min(0.28, this.items.length * 0.006); },
+  };
+}
+
+// ───────────────────────── Rótulos (sprites) ─────────────────────────
+function labelTex(text, hex) {
+  const css = '#' + hex.toString(16).padStart(6, '0');
+  return canvasTex(256, 96, (g, w, h) => {
+    g.fillStyle = 'rgba(14,17,23,0.82)';
+    g.strokeStyle = css; g.lineWidth = 6;
+    const r = 30, x = 6, y = 6, ww = w - 12, hh = h - 12;
+    g.beginPath();
+    g.moveTo(x + r, y); g.arcTo(x + ww, y, x + ww, y + hh, r); g.arcTo(x + ww, y + hh, x, y + hh, r);
+    g.arcTo(x, y + hh, x, y, r); g.arcTo(x, y, x + ww, y, r); g.closePath();
+    g.fill(); g.stroke();
+    g.fillStyle = css; let fs = 46; g.font = `700 ${fs}px system-ui, "Segoe UI", sans-serif`;
+    while (g.measureText(text).width > w - 40 && fs > 16) { fs -= 2; g.font = `700 ${fs}px system-ui, "Segoe UI", sans-serif`; }
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText(text, w / 2, h / 2 + 3);
+  });
+}
+const LABEL_TEX = {};
+for (const k of Object.keys(CLASSES)) LABEL_TEX[k] = labelTex(k, CLASSES[k].hex);
+LABEL_TEX.CORPO = labelTex('CORPO ESTRANHO', 0xff9d4d);
+
+function binSign(cls, bin) {
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: LABEL_TEX[cls], transparent: true, depthWrite: false }));
+  s.scale.set(1.5, 0.56, 1);
+  s.position.set(bin.cx, 1.75, bin.cz);
+  scene.add(s);
+}
+
+// ───────────────────────── Pórtico de sensores ─────────────────────────
+const scanner = { flash: 0, color: new THREE.Color(0xff2a2a) };
+const laserBase = new THREE.Color(0xff2a2a);
+let laserMat, laserLine;
+{
+  const x = CFG.sensorX, top = CFG.beltTop + 1.5;
+  const g = new THREE.Group(); g.position.x = x;
+  const add = (geo, m, px, py, pz) => { const o = new THREE.Mesh(geo, m); o.position.set(px, py, pz); o.castShadow = true; g.add(o); return o; };
+  for (const s of [-1, 1]) add(new THREE.BoxGeometry(0.14, top, 0.14), M.steel, 0, top / 2, s * 1.22);
+  add(new THREE.BoxGeometry(0.2, 0.18, 2.66), M.steel, 0, top, 0);
+  add(new THREE.BoxGeometry(0.6, 0.28, 0.5), M.dark, 0, top - 0.22, 0);                       // câmera
+  const lens = add(new THREE.CylinderGeometry(0.1, 0.12, 0.1, 20), new THREE.MeshBasicMaterial({ color: col(0x4fd8ff) }), 0, top - 0.41, 0);
+  lens.castShadow = false;
+  for (const s of [-1, 1]) {                                                                   // barras de luz
+    const bar = add(new THREE.BoxGeometry(0.5, 0.05, 0.1), new THREE.MeshBasicMaterial({ color: col(0xffffff) }), 0, top - 0.3, s * 0.55);
+    bar.castShadow = false;
+  }
+  for (const s of [-1, 1]) {                                                                   // LEDs de status
+    const led = add(new THREE.SphereGeometry(0.05, 12, 8), new THREE.MeshBasicMaterial({ color: col(0x2fd36b) }), 0.09, 1.6, s * 1.22);
+    led.castShadow = false;
+  }
+  scene.add(g);
+
+  // folha de laser
+  const grad = canvasTex(8, 128, (c, w, h) => {
+    const gr = c.createLinearGradient(0, h, 0, 0);
+    gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+    c.fillStyle = gr; c.fillRect(0, 0, w, h);
+  });
+  laserMat = new THREE.MeshBasicMaterial({ map: grad, color: laserBase.clone(), transparent: true, opacity: 0.4,
+    side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending });
+  const sheet = new THREE.Mesh(new THREE.PlaneGeometry(beltW, 0.9), laserMat);
+  sheet.rotation.y = Math.PI / 2;
+  sheet.position.set(x, CFG.beltTop + 0.45, 0);
+  scene.add(sheet);
+
+  laserLine = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.01, beltW), new THREE.MeshBasicMaterial({ color: laserBase.clone() }));
+  laserLine.position.set(x, CFG.beltTop + 0.012, 0);
+  scene.add(laserLine);
+}
+
+// ───────────────────────── Ejetores de ar + caixa de descarte ─────────────────────────
+// RUIM → caixa (lado -z) · SUSPEITA → esteira da qualidade (lado +z) · CALIBRE (depois da lavagem) → caixa de papelão
+const STATIONS = [
+  { cls: 'RUIM',     x: 1.2,   side: +1, z: 0 },     // ejetor em +z, empurra para -z
+  { cls: 'SUSPEITA', x: 4.0,   side: -1, z: 0 },     // ejetor em -z, empurra para +z
+  { cls: 'CALIBRE',  x: 12.55, side: +1, z: 6.4 },   // ejetor em +z da esteira de lavagem, empurra para -z
+];
+const BIN_Z = 2.1;
+const LARGE_S = 1.1;                                   // acima desta escala a batata é "grande"
+for (const st of STATIONS) {
+  const hex = st.cls === 'CALIBRE' ? 0xc79a5b : CLASSES[st.cls].hex;
+  if (st.cls === 'RUIM') {
+    st.bin = makeBin(st.x + 0.9, -st.side * BIN_Z, 2.6, 1.9, CLASSES.RUIM.hex);
+    binSign('RUIM', st.bin);
+  } else if (st.cls === 'SUSPEITA') {
+    st.lane = LANES.q;
+    binSign('SUSPEITA', { cx: 4.2, cz: 1.9 });
+  }
+
+  const g = new THREE.Group(); g.position.set(st.x, 0, st.z + st.side * 1.16);
+  const add = (geo, m, x, y, z) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = true; g.add(o); return o; };
+  add(new THREE.BoxGeometry(0.12, CFG.beltTop + 0.2, 0.12), M.steel, 0, (CFG.beltTop + 0.2) / 2, 0.02 * st.side);
+  add(new THREE.BoxGeometry(0.55, 0.14, 0.14), M.dark, 0, CFG.beltTop + 0.22, 0);
+  for (const dx of [-0.18, 0, 0.18]) {
+    const nz = add(new THREE.CylinderGeometry(0.03, 0.04, 0.1, 10), M.steel, dx, CFG.beltTop + 0.22, -st.side * 0.1);
+    nz.rotation.x = Math.PI / 2;
+  }
+  st.lampMat = new THREE.MeshStandardMaterial({ color: col(hex), emissive: col(hex), emissiveIntensity: 0.15 });
+  const pole = add(new THREE.CylinderGeometry(0.015, 0.015, 0.4, 6), M.steel, 0, CFG.beltTop + 0.5, 0);
+  pole.castShadow = false;
+  add(new THREE.SphereGeometry(0.07, 14, 10), st.lampMat, 0, CFG.beltTop + 0.75, 0);
+  scene.add(g);
+
+  // sopro de ar: cone com a ponta no bico
+  const coneGeo = new THREE.ConeGeometry(0.42, 1.3, 20, 1, true);
+  coneGeo.translate(0, -0.65, 0);
+  st.puffMat = new THREE.MeshBasicMaterial({ color: 0xdfeeff, transparent: true, opacity: 0, depthWrite: false,
+    blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
+  st.puff = new THREE.Mesh(coneGeo, st.puffMat);
+  st.puff.rotation.x = st.side * Math.PI / 2;
+  st.puff.position.set(st.x, CFG.beltTop + 0.22, st.z + st.side * 1.04);
+  st.puff.visible = false;
+  scene.add(st.puff);
+  st.puffLife = 0; st.lampFlash = 0;
+}
+const RUIM_BIN = STATIONS[0].bin;
+
+// ───────────────────────── Funcionários (low-poly) ─────────────────────────
+function makeWorker(shirtHex, hatHex) {
+  const g = new THREE.Group();
+  const skin = new THREE.MeshStandardMaterial({ color: col(0xe0ac85), roughness: 0.8 });
+  const shirt = new THREE.MeshStandardMaterial({ color: col(shirtHex), roughness: 0.8 });
+  const pants = new THREE.MeshStandardMaterial({ color: col(0x2c3442), roughness: 0.9 });
+  const hat = new THREE.MeshStandardMaterial({ color: col(hatHex), roughness: 0.5 });
+  const vest = new THREE.MeshStandardMaterial({ color: col(0xd9e84a), roughness: 0.6 });
+  const add = (parent, geo, mat, x, y, z) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; parent.add(m); return m; };
+
+  const legs = [-1, 1].map(s => {
+    const p = new THREE.Group(); p.position.set(s * 0.1, 0.8, 0); g.add(p);
+    add(p, new THREE.BoxGeometry(0.15, 0.8, 0.17), pants, 0, -0.4, 0);
+    return p;
+  });
+  const torso = new THREE.Group(); torso.position.y = 0.8; g.add(torso);     // pivô no quadril
+  add(torso, new THREE.BoxGeometry(0.42, 0.56, 0.24), shirt, 0, 0.28, 0);
+  add(torso, new THREE.BoxGeometry(0.435, 0.07, 0.255), vest, 0, 0.2, 0);
+  add(torso, new THREE.BoxGeometry(0.435, 0.07, 0.255), vest, 0, 0.4, 0);
+  const head = new THREE.Group(); head.position.y = 0.62; torso.add(head);
+  add(head, new THREE.SphereGeometry(0.12, 14, 10), skin, 0, 0.12, 0);
+  add(head, new THREE.SphereGeometry(0.135, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), hat, 0, 0.17, 0);
+  add(head, new THREE.BoxGeometry(0.2, 0.02, 0.12), hat, 0, 0.17, 0.11);
+  const arms = [-1, 1].map(s => {
+    const p = new THREE.Group(); p.position.set(s * 0.26, 0.5, 0); torso.add(p);
+    const a = add(p, new THREE.BoxGeometry(0.1, 0.1, 0.62), shirt, 0, 0, 0.31);
+    add(p, new THREE.SphereGeometry(0.06, 10, 8), skin, 0, 0, 0.63);
+    p.rotation.set(Math.PI / 2, 0, 0);                                       // braço pendurado
+    return p;
+  });
+  return { g, legs, torso, head, arms, phase: 0 };
+}
+
+const HANG_Q = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0));
+const _q1 = new THREE.Quaternion(), _q2 = new THREE.Quaternion();
+function aimArm(arm, target, k) {                               // aponta o braço (+z local) para um ponto do mundo
+  _q1.copy(arm.quaternion);
+  arm.lookAt(target);
+  _q2.copy(arm.quaternion);
+  arm.quaternion.copy(_q1).slerp(_q2, k);
+}
+function relaxArms(w, k) { for (const a of w.arms) a.quaternion.slerp(HANG_Q, k); }
+function faceTo(w, x, z, k) {
+  const want = Math.atan2(x - w.g.position.x, z - w.g.position.z);
+  let d = want - w.g.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d));
+  w.g.rotation.y += d * k;
+}
+function walkTo(w, tx, tz, dt, speed = 1.5) {
+  const g = w.g, dx = tx - g.position.x, dz = tz - g.position.z, d = Math.hypot(dx, dz);
+  if (d < 0.04) { w.legs[0].rotation.x = w.legs[1].rotation.x = 0; return true; }
+  const s = Math.min(d, speed * dt);
+  g.position.x += dx / d * s; g.position.z += dz / d * s;
+  faceTo(w, tx, tz, Math.min(1, 10 * dt));
+  w.phase += s * 4.4;
+  w.legs[0].rotation.x = Math.sin(w.phase) * 0.6; w.legs[1].rotation.x = -Math.sin(w.phase) * 0.6;
+  return false;
+}
+
+// ───────────────────────── Sala de qualidade (vidro) ─────────────────────────
+const QR = { x0: 2.2, x1: 7.9, z0: 2.5, z1: 8.9 };
+const STOPZ = 3.9;                                             // fim da fila antes da inspeção
+{
+  const glassMat = new THREE.MeshStandardMaterial({ color: col(0xa8d4ff), roughness: 0.05, metalness: 0.2, transparent: true,
+    opacity: 0.16, side: THREE.DoubleSide, depthWrite: false });
+  const baseMat = new THREE.MeshStandardMaterial({ color: col(0xdde3ea), roughness: 0.7 });
+  function glassWall(x0, z0, x1, z1) {
+    const alongX = Math.abs(x1 - x0) > Math.abs(z1 - z0);
+    const len = alongX ? Math.abs(x1 - x0) : Math.abs(z1 - z0);
+    const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
+    const mk = (w, h, y, mat, shadow) => {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(alongX ? w : 0.06, h, alongX ? 0.06 : w), mat);
+      m.position.set(cx, y, cz); m.castShadow = !!shadow; scene.add(still(m)); return m;
+    };
+    mk(len, 0.9, 0.45, baseMat, true);
+    mk(len, 1.5, 1.65, glassMat);
+    mk(len, 0.08, 2.46, M.steel);
+    const n = Math.max(1, Math.round(len / 1.5));
+    for (let i = 0; i <= n; i++) {
+      const t = -len / 2 + len * i / n;
+      const p = new THREE.Mesh(new THREE.BoxGeometry(0.07, 2.5, 0.07), M.steel);
+      p.position.set(alongX ? cx + t : cx, 1.25, alongX ? cz : cz + t); scene.add(still(p));
+    }
+    solid(Math.min(x0, x1) - 0.05, Math.max(x0, x1) + 0.05, Math.min(z0, z1) - 0.05, Math.max(z0, z1) + 0.05);
+  }
+  glassWall(2.2, 2.5, 3.2, 2.5); glassWall(5.2, 2.5, 6.2, 2.5); glassWall(7.2, 2.5, 7.9, 2.5);   // sul (vãos: esteira e porta)
+  glassWall(2.2, 2.5, 2.2, 7.4); glassWall(2.2, 8.4, 2.2, 8.9);                                                                    // oeste
+  glassWall(2.2, 8.9, 7.9, 8.9);                                                                    // norte
+  glassWall(7.9, 2.5, 7.9, 5.4); glassWall(7.9, 7.4, 7.9, 8.9);                                     // leste (vão: esteira)
+
+  const tile = canvasTex(128, 128, (g, w, h) => {
+    g.fillStyle = '#d7dde4'; g.fillRect(0, 0, w, h);
+    g.fillStyle = '#c3cbd5'; g.fillRect(0, 0, w / 2, h / 2); g.fillRect(w / 2, h / 2, w / 2, h / 2);
+  }, { repeat: [6, 6] });
+  const rf = new THREE.Mesh(new THREE.PlaneGeometry(QR.x1 - QR.x0, QR.z1 - QR.z0), new THREE.MeshStandardMaterial({ map: tile, roughness: 0.55 }));
+  rf.rotation.x = -Math.PI / 2; rf.position.set((QR.x0 + QR.x1) / 2, 0.012, (QR.z0 + QR.z1) / 2); rf.receiveShadow = true; scene.add(still(rf));
+
+  // letreiro sobre a entrada
+  const tex = canvasTex(640, 120, (g, w, h) => {
+    g.fillStyle = '#1d4f91'; g.fillRect(0, 0, w, h);
+    g.strokeStyle = '#cfe6ff'; g.lineWidth = 6; g.strokeRect(6, 6, w - 12, h - 12);
+    g.fillStyle = '#ffffff'; g.font = '800 54px system-ui, "Segoe UI", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText('SETOR DE QUALIDADE', w / 2, h / 2 + 2);
+  });
+  const sign = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 0.6), new THREE.MeshBasicMaterial({ map: tex }));
+  sign.position.set(4.2, 2.95, 2.45); sign.rotation.y = Math.PI; scene.add(still(sign));
+
+  // mesa com monitor e banqueta
+  const desk = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.05, 0.7), M.wood); desk.position.set(6.9, 0.85, 8.45); desk.castShadow = true; scene.add(still(desk));
+  for (const [dx, dz] of [[-0.7, -0.3], [0.7, -0.3], [-0.7, 0.3], [0.7, 0.3]]) {
+    const l = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.85, 0.05), M.steel); l.position.set(6.9 + dx, 0.425, 8.45 + dz); scene.add(still(l));
+  }
+  const mon = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.34, 0.04), new THREE.MeshBasicMaterial({ color: col(0x4fa8ff) })); mon.position.set(6.9, 1.12, 8.6); scene.add(still(mon));
+  const stool = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.05, 14), M.dark); stool.position.set(6.9, 0.55, 7.8); scene.add(still(stool));
+  const stoolLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.55, 8), M.steel); stoolLeg.position.set(6.9, 0.27, 7.8); scene.add(still(stoolLeg));
+  solid(6.0, 7.8, 8.0, 8.9);
+
+  const roomLight = new THREE.PointLight(0xeaf4ff, 0.8, 9, 2);
+  roomLight.position.set(5.05, 2.3, 5.7); scene.add(roomLight);
+}
+
+// caixas de descarte da sala (reprovadas pelos inspetores)
+const REJ_W = makeBin(2.75, 4.55, 0.9, 0.9, CLASSES.RUIM.hex);
+
+const inspectors = [
+  { x: 2.95, z: 3.7, side: -1, bin: REJ_W, shirt: 0x3d7ccf, hat: 0xf2f2f2 },
+  { x: 5.45, z: 3.7, side: +1, bin: REJ_W, shirt: 0x2f9d8f, hat: 0xf2f2f2 },
+  { x: 2.95, z: 3.0, side: -1, bin: REJ_W, shirt: 0x8a5cc4, hat: 0xf2f2f2 },
+].map(c => {
+  const w = makeWorker(c.shirt, c.hat);
+  w.g.position.set(c.x, 0, c.z);
+  w.g.rotation.y = c.side < 0 ? Math.PI / 2 : -Math.PI / 2;               // de frente para a esteira
+  scene.add(w.g); w.g.updateMatrixWorld(true);
+  return Object.assign(c, { w, state: 'idle', t: 0, cool: rand(0, 2), p: null, dur: 3, thrown: false });
+});
+
+// ───────────────────────── Lavagem ─────────────────────────
+const WASH = { x0: 10.0, x1: 12.2, cx: 11.1, cz: 6.4 };
+const washBrushes = [];
+let washPts, washVel;
+{
+  const top = CFG.beltTop;
+  const blue = new THREE.MeshStandardMaterial({ color: col(0x2d6fa8), metalness: 0.5, roughness: 0.4 });
+  const acrylic = new THREE.MeshStandardMaterial({ color: col(0xbfe3ff), transparent: true, opacity: 0.2, roughness: 0.1, depthWrite: false, side: THREE.DoubleSide });
+  const add = (geo, mat, x, y, z, shadow) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = !!shadow; scene.add(m); return m; };
+
+  add(new THREE.BoxGeometry(2.4, 0.14, 2.2), blue, WASH.cx, top + 0.98, WASH.cz, true);            // tampa
+  for (const s of [-1, 1]) add(new THREE.BoxGeometry(2.3, 0.95, 0.05), acrylic, WASH.cx, top + 0.5, WASH.cz + s * 1.02);
+  for (const x of [WASH.x0, WASH.x1]) {
+    for (const s of [-1, 1]) add(new THREE.BoxGeometry(0.12, 1.05, 0.12), blue, x, top + 0.5, WASH.cz + s * 1.02, true);
+    add(new THREE.BoxGeometry(0.12, 0.14, 2.2), blue, x, top + 0.98, WASH.cz);
+    for (let i = 0; i < 6; i++) {                                                                      // cortina de borracha
+      add(new THREE.BoxGeometry(0.02, 0.5, 0.2), new THREE.MeshStandardMaterial({ color: col(0x1d2024), transparent: true, opacity: 0.85, roughness: 0.9 }),
+        x, top + 0.68, WASH.cz - 0.84 + i * 0.336);
+    }
+  }
+  for (const s of [-0.5, 0.5]) {                                                                       // tubos e bicos
+    const pipe = add(new THREE.CylinderGeometry(0.03, 0.03, 2.1, 8), M.steel, WASH.cx, top + 0.86, WASH.cz + s);
+    pipe.rotation.z = Math.PI / 2;
+    for (let x = WASH.x0 + 0.25; x < WASH.x1; x += 0.35) add(new THREE.ConeGeometry(0.04, 0.09, 8), M.steel, x, top + 0.8, WASH.cz + s).rotation.x = Math.PI;
+  }
+  const brushMat = new THREE.MeshStandardMaterial({ map: canvasTex(64, 64, (g, w, h) => {
+    g.fillStyle = '#e8731c'; g.fillRect(0, 0, w, h);
+    for (let i = 0; i < 16; i++) { g.fillStyle = i % 2 ? '#c85a0c' : '#f08a3a'; g.fillRect(i * 4, 0, 2, h); }
+  }), roughness: 0.9 });
+  for (const x of [10.55, 11.1, 11.65]) {                                                              // escovas
+    const b = add(new THREE.CylinderGeometry(0.14, 0.14, 1.7, 16), brushMat, x, top + 0.62, WASH.cz);
+    b.rotation.x = Math.PI / 2; washBrushes.push(b);
+  }
+  // jatos de água (partículas)
+  const N = 260, arr = new Float32Array(N * 3); washVel = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    arr[i * 3] = rand(WASH.x0 + 0.05, WASH.x1 - 0.05); arr[i * 3 + 1] = rand(top + 0.05, top + 0.78); arr[i * 3 + 2] = rand(WASH.cz - 0.85, WASH.cz + 0.85);
+    washVel[i] = rand(2.2, 3.4);
+  }
+  const pg = new THREE.BufferGeometry(); pg.setAttribute('position', new THREE.BufferAttribute(arr, 3));
+  washPts = new THREE.Points(pg, new THREE.PointsMaterial({ color: 0xcfeaff, size: 0.045, transparent: true, opacity: 0.75, depthWrite: false }));
+  washPts.frustumCulled = false; scene.add(washPts);
+
+  const t = canvasTex(320, 96, (g, w, h) => {
+    g.fillStyle = '#2d6fa8'; g.fillRect(0, 0, w, h); g.strokeStyle = '#d7efff'; g.lineWidth = 5; g.strokeRect(5, 5, w - 10, h - 10);
+    g.fillStyle = '#fff'; g.font = '800 50px system-ui, "Segoe UI", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('LAVAGEM', w / 2, h / 2 + 2);
+  });
+  const sign = add(new THREE.PlaneGeometry(1.6, 0.48), new THREE.MeshBasicMaterial({ map: t }), WASH.cx, top + 1.5, WASH.cz + 1.15);
+  solid(WASH.x0 - 0.1, WASH.x1 + 0.1, WASH.cz - 1.1, WASH.cz + 1.1);
+}
+
+// ───────────────────────── Embalagem ─────────────────────────
+const PACK_IN = { x0: 12.99, x1: 13.65, z0: 5.95, z1: 6.85, floor: 0.5, wallTop: 1.0, items: [], consume: true, pile() { return 0; } };
+const pack = { count: 0, pending: 0, table: [], flash: 0 };
+const SACK_N = 6;            // batatas por saco (simplificação visual de 5 kg)
+const SACK_Y = 0.83;         // altura do tampo da mesa de sacos
+let packLampMat, packDisplay;
+{
+  const yellow = new THREE.MeshStandardMaterial({ color: col(0xe8b82a), metalness: 0.3, roughness: 0.5 });
+  const add = (geo, mat, x, y, z, shadow) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = !!shadow; scene.add(m); return m; };
+  // funil de entrada (baixo, abaixo do nível da esteira)
+  add(new THREE.BoxGeometry(0.74, 0.1, 1.0), M.dark, 13.32, 0.45, 6.4);
+  add(new THREE.BoxGeometry(0.74, 0.5, 0.05), M.steel, 13.32, 0.75, 5.93, true);
+  add(new THREE.BoxGeometry(0.74, 0.5, 0.05), M.steel, 13.32, 0.75, 6.87, true);
+  add(new THREE.BoxGeometry(0.05, 0.5, 1.0), M.steel, 12.97, 0.75, 6.4, true);
+  // máquina
+  add(new THREE.BoxGeometry(1.1, 2.0, 1.9), yellow, 14.25, 1.0, 6.4, true);
+  add(new THREE.BoxGeometry(1.14, 0.1, 1.94), M.dark, 14.25, 2.02, 6.4);
+  packDisplay = new THREE.MeshBasicMaterial({ color: col(0x39d98a) });
+  add(new THREE.BoxGeometry(0.5, 0.28, 0.03), packDisplay, 14.25, 1.5, 5.43);
+  packLampMat = new THREE.MeshStandardMaterial({ color: col(0x39d98a), emissive: col(0x39d98a), emissiveIntensity: 0.2 });
+  add(new THREE.SphereGeometry(0.1, 14, 10), packLampMat, 14.25, 2.2, 6.4);
+  add(new THREE.CylinderGeometry(0.03, 0.03, 0.2, 8), M.steel, 14.25, 2.12, 6.4);
+  const t = canvasTex(256, 80, (g, w, h) => {
+    g.fillStyle = '#e8b82a'; g.fillRect(0, 0, w, h); g.fillStyle = '#1a1405'; g.font = '800 44px system-ui, "Segoe UI", sans-serif';
+    g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('EMBALAGEM', w / 2, h / 2 + 2);
+  });
+  add(new THREE.PlaneGeometry(1.05, 0.33), new THREE.MeshBasicMaterial({ map: t }), 14.25, 1.82, 5.43);
+  // rampa e mesa de sacos
+  const chute = add(new THREE.BoxGeometry(0.45, 0.05, 0.6), M.steel, 14.97, 0.95, 6.4); chute.rotation.z = -0.35;
+  add(new THREE.BoxGeometry(0.7, 0.05, 1.0), M.steel, 15.2, 0.8, 6.4, true);
+  for (const [dx, dz] of [[-0.3, -0.45], [0.3, -0.45], [-0.3, 0.45], [0.3, 0.45]]) add(new THREE.BoxGeometry(0.05, 0.8, 0.05), M.steel, 15.2 + dx, 0.4, 6.4 + dz);
+  solid(12.9, 15.6, 5.45, 7.4);
+}
+
+// saco de rede de 5 kg
+const sackTex = canvasTex(128, 96, (g, w, h) => {
+  g.fillStyle = '#c9803a'; g.fillRect(0, 0, w, h);
+  g.strokeStyle = 'rgba(80,40,10,.35)'; g.lineWidth = 1;
+  for (let i = -h; i < w; i += 8) { g.beginPath(); g.moveTo(i, 0); g.lineTo(i + h, h); g.stroke(); g.beginPath(); g.moveTo(i + h, 0); g.lineTo(i, h); g.stroke(); }
+  g.fillStyle = '#f3efe4'; g.fillRect(32, 22, 64, 52);
+  g.fillStyle = '#c0392b'; g.fillRect(32, 22, 64, 14);
+  g.fillStyle = '#2b2b2b'; g.font = '800 20px system-ui, sans-serif'; g.textAlign = 'center'; g.fillText('5 kg', 64, 58);
+});
+const sackGeo = new THREE.BoxGeometry(0.5, 0.17, 0.32);
+const sackMat = new THREE.MeshStandardMaterial({ map: sackTex, roughness: 0.85 });
+function makeSack() {
+  const m = new THREE.Mesh(sackGeo, sackMat); m.castShadow = true; return m;
+}
+function layoutTable() {
+  pack.table.forEach((s, i) => { s.position.set(15.2, SACK_Y + 0.085 + (i > 2 ? 0.17 : 0), 6.4 + ((i % 3) - 1) * 0.33); s.rotation.set(0, 0, 0); });
+}
+
+// ───────────────────────── Equipe de carga e de descarte ─────────────────────────
+const loader = { w: makeWorker(0xd9a21b, 0xff7a1a), state: 'wait', t: 0, sack: null, path: [], slot: 0, cool: 0 };
+loader.w.g.position.set(14.2, 0, 5.25); scene.add(loader.w.g);
+// funcionários do descarte: um para a caixa RUIM da triagem, outro para a caixa de reprovadas da sala de qualidade
+function makeJanitor(cfg) {
+  const w = makeWorker(cfg.shirt, 0xffffff);
+  w.g.position.set(cfg.home[0], 0, cfg.home[1]); scene.add(w.g);
+  const crate = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.3, 0.4), new THREE.MeshStandardMaterial({ color: col(0xff4d4d), roughness: 0.6 }));
+  crate.castShadow = true; crate.visible = false; scene.add(crate);
+  return Object.assign({ w, crate, state: 'wait', t: 0, path: [], clearing: [], cool: rand(3, 8) }, cfg);
+}
+function dumpster(cx, cz, lenX, lenZ) {
+  const dm = new THREE.MeshStandardMaterial({ color: col(0x2f5f3f), roughness: 0.6, metalness: 0.3 });
+  const d = new THREE.Mesh(new THREE.BoxGeometry(lenX, 1.1, lenZ), dm); d.position.set(cx, 0.55, cz); d.castShadow = true; scene.add(still(d));
+  const lid = new THREE.Mesh(new THREE.BoxGeometry(lenX + 0.05, 0.06, lenZ + 0.05), M.dark); lid.position.set(cx, 1.13, cz); scene.add(still(lid));
+  solid(cx - lenX / 2, cx + lenX / 2, cz - lenZ / 2, cz + lenZ / 2);
+}
+dumpster(1.0, -6.3, 1.9, 1.0);        // lixo da triagem (lado -z)
+dumpster(0.3, 8.6, 1.0, 1.9);         // lixo da sala de qualidade (fora da porta oeste)
+const janitors = [
+  makeJanitor({ bin: RUIM_BIN, shirt: 0x3a9d5d, home: [-1.0, -3.5], thr: 20,
+    toBin: [[2.1, -3.5]], faceBin: [2.1, -2.1], reach: [2.1, 0.8, -2.3],
+    toDump: [[1.0, -5.1]], faceDump: [1.0, -6.3], back: [[-1.0, -3.5]] }),
+  makeJanitor({ bin: REJ_W, shirt: 0xc77d2e, home: [1.0, 5.6], thr: 8,
+    toBin: [[1.0, 7.9], [2.75, 7.9], [2.75, 5.7]], faceBin: [2.75, 4.55], reach: [2.75, 0.8, 4.55],
+    toDump: [[2.75, 7.9], [1.5, 7.9]], faceDump: [0.3, 7.9], back: [[1.0, 7.9], [1.0, 5.6]] }),
+];
+// placa de saída sobre a porta oeste da sala
+{
+  const t = canvasTex(256, 96, (g, w, h) => {
+    g.fillStyle = '#1f8a4c'; g.fillRect(0, 0, w, h); g.strokeStyle = '#d7ffe6'; g.lineWidth = 5; g.strokeRect(5, 5, w - 10, h - 10);
+    g.fillStyle = '#fff'; g.font = '800 52px system-ui, "Segoe UI", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('SAÍDA', w / 2, h / 2 + 3);
+  });
+  for (const side of [1, -1]) {                                   // uma placa para cada lado, ambas legíveis
+    const s = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.34), new THREE.MeshBasicMaterial({ map: t }));
+    s.position.set(2.2 + side * 0.01, 2.75, 7.9); s.rotation.y = side * Math.PI / 2; scene.add(still(s));
+  }
+}
+
+// ───────────────────────── Fornecedores ─────────────────────────
+// perfil = chance de cada tipo de batata em um lote desse fornecedor (o resto é corpo estranho)
+const newStat = () => ({ liberadas: 0, leitura: { BOA: 0, RUIM: 0, SUSPEITA: 0, CORPO: 0 }, aprov: 0, desc: 0, entregas: 0 });
+const SUP = [
+  { id: 'F-01', nome: 'Fazenda Sol', cor: 0x3fae4a, perfil: { BOA: 0.74, RUIM: 0.08, SUSPEITA: 0.13 }, stat: newStat(), ativo: true },
+  { id: 'F-02', nome: 'Agro Vale',   cor: 0x3d7ccf, perfil: { BOA: 0.62, RUIM: 0.18, SUSPEITA: 0.14 }, stat: newStat(), ativo: true },
+  { id: 'F-03', nome: 'Terra Boa',   cor: 0xd6453b, perfil: { BOA: 0.50, RUIM: 0.30, SUSPEITA: 0.13 }, stat: newStat(), ativo: true },
+];
+const CRATE_N = 25;                 // batatas por caixa de madeira
+const DELIVERY_CRATES = 8;          // caixas por entrega
+
+// ───────────────────────── Esteira alimentadora (do recebimento até o funil) ─────────────────────────
+const FEED = { x0: -12.8, x1: -6.5, y0: 0.8, y1: 3.8 };
+FEED.slope = (FEED.y1 - FEED.y0) / (FEED.x1 - FEED.x0);
+FEED.ang = Math.atan(FEED.slope);
+FEED.len = (FEED.x1 - FEED.x0) / Math.cos(FEED.ang);
+const VF = 1.0;                     // velocidade horizontal da alimentadora
+LANES.feed = { dx: 1, dz: 0, c: 0, x0: FEED.x0, x1: FEED.x1, z0: -0.5, z1: 0.5, hw: 0.5, tilt: FEED.ang, yAt: x => FEED.y0 + (x - FEED.x0) * FEED.slope };
+function laneSpeed(L, v, vm) { return L === LANES.main ? vm : L === LANES.feed ? VF : v; }
+{
+  const g = new THREE.Group();
+  g.position.set((FEED.x0 + FEED.x1) / 2, (FEED.y0 + FEED.y1) / 2, 0); g.rotation.z = FEED.ang; scene.add(g);
+  const tex = tiled(beltBase, FEED.len / CFG.tile, 1);
+  const geo = new THREE.PlaneGeometry(FEED.len, 1.0); geo.rotateX(-Math.PI / 2);
+  const top = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: tex, roughness: 0.92 })); top.position.y = 0.002; top.receiveShadow = true; g.add(top);
+  beltAnim.push({ tex, id: 'feed' });
+  const body = new THREE.Mesh(new THREE.BoxGeometry(FEED.len, 0.08, 1.0), M.rubber); body.position.y = -0.05; g.add(body);
+  for (const s of [-1, 1]) {
+    const rail = new THREE.Mesh(new THREE.BoxGeometry(FEED.len, 0.2, 0.06), M.frame); rail.position.set(0, 0.08, s * 0.56); rail.castShadow = true; g.add(rail);
+  }
+  for (const x of [-12.2, -10.6, -9.0, -7.6]) for (const s of [-1, 1]) {                   // pés de altura crescente
+    const h = LANES.feed.yAt(x) - 0.12;
+    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.1, h, 0.1), M.frame); leg.position.set(x, h / 2, s * 0.56); leg.castShadow = true; scene.add(still(leg));
+  }
+  solid(FEED.x0, FEED.x1, -0.75, 0.75);
+}
+
+// ───────────────────────── Tremonha de alimentação ─────────────────────────
+const BUN = { x0: -14.6, x1: -12.8, cap: 100, list: [] };
+const bunkerTotal = () => BUN.list.reduce((s, e) => s + e.n, 0);
+function takeFromBunker() {
+  const e = BUN.list[0]; if (!e) return null;
+  const out = { si: e.si, lote: e.lote };
+  if (--e.n <= 0) BUN.list.shift();
+  return out;
+}
+let moundMesh;
+{
+  const mat = new THREE.MeshStandardMaterial({ color: col(0x56677a), metalness: 0.4, roughness: 0.55 });
+  const add = (w, h, d, x, y, z) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true; scene.add(still(m)); };
+  add(0.08, 1.0, 1.9, BUN.x0, 0.5, 0);                                   // oeste
+  add(1.8, 1.0, 0.08, (BUN.x0 + BUN.x1) / 2, 0.5, -0.9); add(1.8, 1.0, 0.08, (BUN.x0 + BUN.x1) / 2, 0.5, 0.9);
+  add(0.08, 0.22, 1.9, BUN.x1, 0.89, 0);                                 // leste: só a borda de cima (a saída fica embaixo)
+  add(1.8, 0.06, 1.8, (BUN.x0 + BUN.x1) / 2, 0.75, 0);                   // fundo
+  const mg = new THREE.SphereGeometry(1, 28, 14, 0, Math.PI * 2, 0, Math.PI / 2);
+  const mp = mg.attributes.position;
+  for (let i = 0; i < mp.count; i++) { const n = vnoiseLite(mp.getX(i) * 3, mp.getZ(i) * 3); mp.setY(i, mp.getY(i) * (0.85 + 0.3 * n)); }
+  mg.computeVertexNormals();
+  const tex = canvasTex(128, 128, (g, w, h) => {
+    g.fillStyle = '#b48a55'; g.fillRect(0, 0, w, h);
+    for (let i = 0; i < 160; i++) { g.fillStyle = `rgba(${90 + Math.random() * 60 | 0},${60 + Math.random() * 40 | 0},30,${0.25 + Math.random() * 0.4})`; g.beginPath(); g.ellipse(Math.random() * w, Math.random() * h, 6 + Math.random() * 6, 4 + Math.random() * 4, Math.random() * 3, 0, 6.3); g.fill(); }
+  }, { repeat: [3, 3] });
+  moundMesh = new THREE.Mesh(mg, new THREE.MeshStandardMaterial({ map: tex, roughness: 0.95 }));
+  moundMesh.position.set((BUN.x0 + BUN.x1) / 2 + 0.05, 0.78, 0); moundMesh.castShadow = true; scene.add(moundMesh);
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: labelTex('TREMONHA', 0x7ec8ff), transparent: true, depthWrite: false }));
+  s.scale.set(1.3, 0.48, 1); s.position.set((BUN.x0 + BUN.x1) / 2, 2.0, 0); scene.add(s);
+  solid(BUN.x0 - 0.1, BUN.x1 + 0.1, -1.0, 1.0);
+}
+function vnoiseLite(x, z) { const s = Math.sin(x * 12.9898 + z * 78.233) * 43758.5453; return s - Math.floor(s); }
+
+// ───────────────────────── Armazém de caixas (2 fileiras, corredor no meio) ─────────────────────────
+const store = { slots: Array.from({ length: 8 }, () => []) };
+const storeCount = () => store.slots.reduce((s, a) => s + a.length, 0);
+const slotXZ = i => ({ x: -11.4 + (i % 4) * 1.0, z: i < 4 ? 1.75 : 3.25 });
+const slotPos = (i, lvl) => { const p = slotXZ(i); return new THREE.Vector3(p.x, 0.2 + lvl * 0.4, p.z); };
+const pickSlotToPlace = () => { let best = -1; store.slots.forEach((a, i) => { if (a.length < 2 && (best < 0 || a.length < store.slots[best].length)) best = i; }); return best; };
+const pickSlotToTake = () => { let best = -1; store.slots.forEach((a, i) => { if (a.length > 0 && (best < 0 || a.length > store.slots[best].length)) best = i; }); return best; };
+{
+  const floorM = new THREE.MeshStandardMaterial({ color: col(0xd9a21b), roughness: 0.8 });
+  for (const z of [1.75, 3.25]) {                                                     // faixas amarelas de cada fileira
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 0.74), floorM); m.rotation.x = -Math.PI / 2; m.position.set(-9.9, 0.006, z); m.receiveShadow = true; scene.add(still(m));
+    const inner = new THREE.Mesh(new THREE.PlaneGeometry(4.08, 0.62), M.dark); inner.rotation.x = -Math.PI / 2; inner.position.set(-9.9, 0.008, z); scene.add(still(inner));
+  }
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: labelTex('ARMAZÉM', 0xd9a21b), transparent: true, depthWrite: false }));
+  s.scale.set(1.4, 0.52, 1); s.position.set(-9.9, 2.3, 2.5); scene.add(s);
+  solid(-11.9, -7.9, 1.4, 2.1); solid(-11.9, -7.9, 2.9, 3.6);
+}
+
+// caixa de madeira com faixa na cor do fornecedor
+const crateGeo = new THREE.BoxGeometry(0.8, 0.4, 0.55);
+const crateMats = SUP.map(S => {
+  const css = '#' + S.cor.toString(16).padStart(6, '0');
+  const side = new THREE.MeshStandardMaterial({ roughness: 0.9, map: canvasTex(128, 64, (g, w, h) => {
+    g.fillStyle = '#9a7345'; g.fillRect(0, 0, w, h);
+    g.strokeStyle = 'rgba(40,25,10,.5)'; g.lineWidth = 2; for (let y = 0; y <= h; y += 16) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); }
+    g.fillStyle = css; g.fillRect(0, 22, w, 20);
+    g.fillStyle = '#fff'; g.font = '700 15px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(S.id, w / 2, 33);
+  }) });
+  const top = new THREE.MeshStandardMaterial({ roughness: 0.95, map: canvasTex(64, 64, (g, w, h) => {
+    g.fillStyle = '#b48a55'; g.fillRect(0, 0, w, h);
+    for (let i = 0; i < 26; i++) { g.fillStyle = `rgba(${100 + Math.random() * 60 | 0},${70 + Math.random() * 40 | 0},35,.7)`; g.beginPath(); g.ellipse(Math.random() * w, Math.random() * h, 8, 6, Math.random() * 3, 0, 6.3); g.fill(); }
+  }) });
+  return [side, side, top, side, side, side];
+});
+function makeCrate(si, lote) {
+  const m = new THREE.Mesh(crateGeo, crateMats[si]); m.castShadow = true; m.receiveShadow = true;
+  return { mesh: m, si, lote, n: CRATE_N, xl: 0, zl: 0 };
+}
+
+// ───────────────────────── Caminhão do fornecedor (doca oeste) ─────────────────────────
+const RT = { g: new THREE.Group(), state: 'away', t: 0, cool: 14, si: 0, lote: '', crates: [], lotSeq: 0, last: -1 };
+RT.dockX = -16.4; RT.dockZ = 4.85;
+const supLogo = SUP.map(S => canvasTex(512, 160, (g, w, h) => {
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillStyle = '#' + S.cor.toString(16).padStart(6, '0'); g.font = '800 64px system-ui, "Segoe UI", sans-serif'; g.fillText(S.nome.toUpperCase(), w / 2, 66);
+  g.fillStyle = '#394150'; g.font = '600 28px system-ui, "Segoe UI", sans-serif'; g.fillText(`${S.id} · BATATAS SELECIONADAS`, w / 2, 122);
+}));
+const rtCab = new THREE.MeshStandardMaterial({ color: col(0x888888), roughness: 0.45, metalness: 0.25 });
+const rtLogos = [];
+{
+  const tg = RT.g; tg.position.set(RT.dockX - 60, 0, RT.dockZ); tg.rotation.y = Math.PI;
+  const white = new THREE.MeshStandardMaterial({ color: col(0xe9edf2), roughness: 0.5, metalness: 0.1 });
+  const floorM = new THREE.MeshStandardMaterial({ color: col(0x5b5f66), roughness: 0.8 });
+  const part = (w, h, d, x, y, z, mat) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true; tg.add(m); return m; };
+  part(6, 0.1, 2.5, 3, 0.8, 0, floorM); part(6, 0.1, 2.5, 3, 3.6, 0, white);
+  part(6, 2.8, 0.1, 3, 2.2, 1.2, white); part(6, 2.8, 0.1, 3, 2.2, -1.2, white); part(0.1, 2.8, 2.5, 6, 2.2, 0, white);
+  part(2.2, 2.3, 2.4, 7.2, 1.75, 0, rtCab);
+  const glass = new THREE.Mesh(new THREE.BoxGeometry(0.05, 1.0, 2.0), new THREE.MeshStandardMaterial({ color: col(0x0d1218), roughness: 0.1, metalness: 0.8 })); glass.position.set(8.32, 2.3, 0); tg.add(glass);
+  for (const [x, z] of [[1.2, 1.3], [1.2, -1.3], [5, 1.3], [5, -1.3], [7.3, 1.3], [7.3, -1.3]]) { const w = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.32, 20), M.rubber); w.rotation.x = Math.PI / 2; w.position.set(x, 0.5, z); tg.add(w); }
+  for (const z of [-0.8, 0.8]) { const hl = new THREE.Mesh(new THREE.SphereGeometry(0.14, 12, 8), new THREE.MeshBasicMaterial({ color: col(0xfff1b8) })); hl.position.set(8.3, 1.05, z); tg.add(hl); }
+  for (const s of [1, -1]) {
+    const lp = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 1.31), new THREE.MeshBasicMaterial({ map: supLogo[0], transparent: true }));
+    lp.position.set(3, 2.2, s * 1.26); lp.rotation.y = s > 0 ? 0 : Math.PI; tg.add(lp); rtLogos.push(lp);
+  }
+  const il = new THREE.PointLight(0xfff0dd, 0.7, 5, 2); il.position.set(3, 3.1, 0); tg.add(il);
+  scene.add(tg);
+}
+
+// ───────────────────────── Equipe do recebimento ─────────────────────────
+const unl = { w: makeWorker(0x8a5a2b, 0xf2f2f2), state: 'wait', t: 0, path: [], crate: null, slot: 0, cx: 0, cz: 0, home: [-14.6, 5.6] };
+unl.w.g.position.set(unl.home[0], 0, unl.home[1]); unl.w.g.rotation.y = -Math.PI / 2; scene.add(unl.w.g);
+const fdw = { w: makeWorker(0x2f9d8f, 0xf2f2f2), state: 'wait', t: 0, path: [], crate: null, slot: 0, home: [-13.4, 3.4], dumped: false };
+fdw.w.g.position.set(fdw.home[0], 0, fdw.home[1]); scene.add(fdw.w.g);
+
+// ───────────────────────── Estoque inicial ─────────────────────────
+function placeCrate(c, slot) {
+  const lvl = store.slots[slot].length, p = slotPos(slot, lvl);
+  c.mesh.position.copy(p); c.mesh.rotation.set(0, 0, 0); scene.add(c.mesh); store.slots[slot].push(c);
+}
+for (let i = 0; i < 6; i++) placeCrate(makeCrate(i % 3, 'L-000'), pickSlotToPlace());
+BUN.list.push({ si: 0, lote: 'L-000', n: 30 }, { si: 1, lote: 'L-000', n: 30 });
+// ───────────────────────── Quebras e manutenção ─────────────────────────
+// a cada ~2 min uma falha alterna entre "esteira travada" e "sensor descalibrando"; o técnico é chamado
+
+const fault = { timer: 70, next: 'esteira', active: null, cal: 1, called: false, jamX: -3, blink: 0, msg: '' };
+const alertEl = document.getElementById('alert');
+const beaconMat = new THREE.MeshStandardMaterial({ color: col(0xff7a1a), emissive: col(0xff3a1a), emissiveIntensity: 0 });
+{
+  const base = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.08, 0.2), M.dark); base.position.set(CFG.sensorX, CFG.beltTop + 1.64, 0.8); scene.add(base);
+  const b = new THREE.Mesh(new THREE.SphereGeometry(0.13, 14, 10), beaconMat); b.position.set(CFG.sensorX, CFG.beltTop + 1.78, 0.8); scene.add(b);
+}
+
+const tech = { w: makeWorker(0x1f6fb5, 0xff7a1a), state: 'wait', t: 0, path: [], job: null, stand: [0, 0], aim: new THREE.Vector3(), home: [-4.6, 3.4] };
+tech.w.g.position.set(tech.home[0], 0, tech.home[1]); scene.add(tech.w.g);
+const sparkArr = new Float32Array(18 * 3);
+const sparks = new THREE.Points(new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(sparkArr, 3)),
+  new THREE.PointsMaterial({ color: 0xffd24a, size: 0.07, transparent: true, opacity: 0.95, depthWrite: false, blending: THREE.AdditiveBlending }));
+sparks.frustumCulled = false; sparks.visible = false; scene.add(sparks);
+{                                                                             // banca de reparos do técnico
+  const bench = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.05, 0.6), M.wood); bench.position.set(-5.4, 0.9, 4.3); bench.castShadow = true; scene.add(still(bench));
+  for (const [dx, dz] of [[-0.7, -0.25], [0.7, -0.25], [-0.7, 0.25], [0.7, 0.25]]) {
+    const l = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.9, 0.05), M.steel); l.position.set(-5.4 + dx, 0.45, 4.3 + dz); scene.add(still(l));
+  }
+  const tb = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.2, 0.25), new THREE.MeshStandardMaterial({ color: col(0xd6322b), roughness: 0.5 })); tb.position.set(-5.2, 1.03, 4.3); tb.castShadow = true; scene.add(still(tb));
+  solid(-6.2, -4.6, 3.95, 4.65);
+}
+
+// ───────────────────────── Tela do sensor óptico ─────────────────────────
+const DEFECT_NAME = { nenhum: 'Sem defeito', podre: 'Podridão', verde: 'Esverdeamento', rachada: 'Rachadura', brotada: 'Brotamento',
+  pinta: 'Pinta escura', pedra: 'Pedra', torrao: 'Torrão de terra', calib: 'Cor fora da faixa' };
+const screen = { cv: document.createElement('canvas'), last: null, acc: 0, dirty: true, calShown: 1 };
+screen.cv.width = 360; screen.cv.height = 225;
+screen.tex = new THREE.CanvasTexture(screen.cv); screen.tex.encoding = THREE.sRGBEncoding; screen.tex.anisotropy = 8;
+{
+  const fr = new THREE.Mesh(new THREE.BoxGeometry(1.34, 0.86, 0.06), M.dark); fr.position.set(CFG.sensorX, 2.05, 1.46); fr.castShadow = true; scene.add(fr);
+  const pl = new THREE.Mesh(new THREE.PlaneGeometry(1.24, 0.775), new THREE.MeshBasicMaterial({ map: screen.tex })); pl.position.set(CFG.sensorX, 2.05, 1.495); scene.add(pl);
+  const arm = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.3), M.steel); arm.position.set(CFG.sensorX, 2.05, 1.3); scene.add(arm);
+}
+function drawScreen() {
+  const g = screen.cv.getContext('2d'), w = 360, h = 225, I = screen.last, cal = fault.cal;
+  g.textBaseline = 'alphabetic'; g.textAlign = 'left';
+  g.fillStyle = '#07130f'; g.fillRect(0, 0, w, h);
+  g.strokeStyle = '#1f5c44'; g.lineWidth = 3; g.strokeRect(2, 2, w - 4, h - 4);
+  g.fillStyle = '#7ef0b4'; g.font = '700 15px system-ui, "Segoe UI", sans-serif'; g.fillText('SENSOR ÓPTICO · LINHA 1', 14, 24);
+  g.fillStyle = '#0d241b'; g.fillRect(14, 34, 156, 126); g.strokeStyle = '#2a7a58'; g.lineWidth = 1; g.strokeRect(14.5, 34.5, 156, 126);
+  if (I) {
+    g.save(); g.translate(92, 97);
+    const rx = 52 * I.s, ry = 32 * I.s;
+    const grad = g.createRadialGradient(-rx * 0.3, -ry * 0.4, 4, 0, 0, rx);
+    grad.addColorStop(0, I.kind === 'pedra' ? '#a3a6ad' : I.kind === 'torrao' ? '#7a5636' : '#e0b57a');
+    grad.addColorStop(1, I.kind === 'pedra' ? '#5b5e66' : I.kind === 'torrao' ? '#3a2616' : '#a9783f');
+    g.fillStyle = grad; g.beginPath(); g.ellipse(0, 0, rx, ry, -0.15, 0, Math.PI * 2); g.fill();
+    if (I.defect === 'podre') { g.fillStyle = 'rgba(30,18,10,.85)'; g.beginPath(); g.ellipse(rx * 0.25, ry * 0.1, rx * 0.4, ry * 0.5, 0, 0, Math.PI * 2); g.fill(); }
+    if (I.defect === 'verde') { g.fillStyle = 'rgba(110,160,50,.75)'; g.beginPath(); g.ellipse(-rx * 0.2, ry * 0.1, rx * 0.5, ry * 0.55, 0, 0, Math.PI * 2); g.fill(); }
+    if (I.defect === 'rachada') {
+      g.strokeStyle = '#2a170b'; g.lineWidth = 2.5; g.beginPath();
+      g.moveTo(-rx * 0.5, -ry * 0.2); g.lineTo(-rx * 0.1, ry * 0.1); g.lineTo(rx * 0.15, -ry * 0.15); g.lineTo(rx * 0.55, ry * 0.2); g.stroke();
+    }
+    if (I.defect === 'brotada') {
+      g.strokeStyle = '#f1ecc0'; g.lineWidth = 3;
+      for (const [a, l] of [[-0.9, 16], [-0.2, 20], [0.7, 14]]) {
+        const ex = Math.cos(a) * rx * 0.9, ey = Math.sin(a) * ry * 0.9;
+        g.beginPath(); g.moveTo(ex, ey); g.lineTo(ex + Math.cos(a) * l, ey + Math.sin(a) * l); g.stroke();
+      }
+    }
+    if (I.defect === 'pinta') { g.fillStyle = 'rgba(40,25,14,.9)'; for (const [x, y, r] of [[-0.3, -0.2, 5], [0.2, 0.25, 6], [0.45, -0.1, 4]]) { g.beginPath(); g.arc(rx * x, ry * y, r, 0, Math.PI * 2); g.fill(); } }
+    g.restore();
+    g.strokeStyle = '#7ef0b4'; g.lineWidth = 2;                                 // colchetes de varredura
+    for (const [x, y, dx, dy] of [[20, 40, 1, 1], [164, 40, -1, 1], [20, 154, 1, -1], [164, 154, -1, -1]]) {
+      g.beginPath(); g.moveTo(x, y + dy * 12); g.lineTo(x, y); g.lineTo(x + dx * 12, y); g.stroke();
+    }
+    const cc = I.cls === 'BOA' ? '#3ee07a' : I.cls === 'RUIM' ? '#ff6b6b' : '#ffd24a', cx = 184;
+    g.fillStyle = cc; g.font = `800 ${I.kind !== 'normal' ? 17 : 24}px system-ui, "Segoe UI", sans-serif`;
+    g.fillText(I.kind !== 'normal' ? 'CORPO ESTRANHO' : I.cls, cx, 62);
+    g.fillStyle = '#b9ffe0'; g.font = '600 14px system-ui, "Segoe UI", sans-serif';
+    g.fillText(DEFECT_NAME[I.misread ? 'calib' : I.defect], cx, 88);
+    g.fillText(`Peso  ${I.peso} g`, cx, 112);
+    g.fillText(`Ø  ${I.diam} mm`, cx, 132);
+    g.fillText(`Confiança  ${Math.round(I.conf * 100)}%`, cx, 152);
+    g.fillStyle = '#143a2b'; g.fillRect(cx, 158, 160, 8); g.fillStyle = cc; g.fillRect(cx, 158, 160 * I.conf, 8);
+  } else {
+    g.fillStyle = '#4aa57c'; g.font = '600 15px system-ui, "Segoe UI", sans-serif'; g.fillText('AGUARDANDO…', 40, 100);
+  }
+  const cc2 = cal > 0.85 ? '#3ee07a' : cal > 0.7 ? '#ffd24a' : '#ff6b6b';
+  g.fillStyle = '#7ef0b4'; g.font = '700 13px system-ui, "Segoe UI", sans-serif'; g.fillText('CALIBRAÇÃO', 14, 192);
+  g.fillStyle = '#143a2b'; g.fillRect(110, 181, 236, 12); g.fillStyle = cc2; g.fillRect(110, 181, 236 * cal, 12);
+  g.fillStyle = cal > 0.75 ? '#e8fff4' : '#ff9d9d'; g.font = '600 13px system-ui, "Segoe UI", sans-serif';
+  g.fillText(cal > 0.75 ? `${Math.round(cal * 100)}%  ·  OK` : `${Math.round(cal * 100)}%  ·  DERIVA DETECTADA`, 14, 214);
+  screen.tex.needsUpdate = true; screen.calShown = cal; screen.dirty = false;
+}
+
+// ───────────────────────── Calibre: caixa de papelão para as batatas grandes ─────────────────────────
+const CARTON_CAP = 5;
+const CARTON_IN = { cx: 12.5, cz: 3.35, x0: 12.1, x1: 12.9, z0: 2.95, z1: 3.75, floor: 0.5, wallTop: 0.95, items: [], aim: true, onSettle: null,
+  pile() { return Math.min(0.1, this.items.length * 0.02); } };
+STATIONS[2].bin = CARTON_IN;
+const cartonQueue = [], cartonAnims = [];
+{
+  const c = CARTON_IN, mat = boxMats[0];
+  const add = (w, h, d, x, y, z, m) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y, z); o.castShadow = true; o.receiveShadow = true; scene.add(still(o)); };
+  add(0.95, 0.44, 0.95, c.cx, 0.22, c.cz, M.dark);                              // base
+  add(0.9, 0.04, 0.9, c.cx, 0.48, c.cz, mat);
+  add(0.9, 0.5, 0.04, c.cx, 0.73, c.cz + 0.43, mat); add(0.9, 0.5, 0.04, c.cx, 0.73, c.cz - 0.43, mat);
+  add(0.04, 0.5, 0.9, c.cx + 0.43, 0.73, c.cz, mat); add(0.04, 0.5, 0.9, c.cx - 0.43, 0.73, c.cz, mat);
+  solid(c.cx - 0.5, c.cx + 0.5, c.cz - 0.5, c.cz + 0.5);
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: labelTex('GRANDES → CAIXA', 0xc79a5b), transparent: true, depthWrite: false }));
+  s.scale.set(1.5, 0.56, 1); s.position.set(c.cx, 1.7, c.cz); scene.add(s);
+}
+
+// ───────────────────────── Paletes (sacos e caixas) ─────────────────────────
+function makePalletGroup() {
+  const g = new THREE.Group();
+  const deck = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.04, 1.0), M.wood); deck.position.y = 0.14; deck.castShadow = true; deck.receiveShadow = true; g.add(deck);
+  for (const dz of [-0.4, 0, 0.4]) { const r = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.1, 0.1), M.wood); r.position.set(0, 0.07, dz); r.castShadow = true; g.add(r); }
+  return g;
+}
+const PAL = {
+  S: { x: 15.3, z: 3.4, cap: 8, kind: 'sacos', g: null, items: [], inflight: 0, state: 'none', timer: 0 },
+  B: { x: 13.8, z: 3.4, cap: 8, kind: 'caixas', g: null, items: [], inflight: 0, state: 'none', timer: 0 },
+};
+function spawnPallet(P) {
+  P.g = makePalletGroup(); P.g.position.set(P.x, 0, P.z); scene.add(P.g);
+  P.items = []; P.inflight = 0; P.state = 'filling';
+}
+// posição (local ao palete) de cada volume empilhado
+function palSlot(P, i) {
+  const c = i % 2, r = (i >> 1) % 2, l = i >> 2;
+  return P.kind === 'sacos' ? new THREE.Vector3(c ? 0.29 : -0.29, 0.16 + 0.085 + l * 0.17, r ? 0.18 : -0.18)
+                            : new THREE.Vector3(c ? 0.3 : -0.3, 0.16 + 0.2 + l * 0.42, r ? 0.25 : -0.25);
+}
+spawnPallet(PAL.S); spawnPallet(PAL.B);
+solid(PAL.S.x - 0.65, PAL.S.x + 0.65, PAL.S.z - 0.55, PAL.S.z + 0.55);
+solid(PAL.B.x - 0.65, PAL.B.x + 0.65, PAL.B.z - 0.55, PAL.B.z + 0.55);
+
+// ───────────────────────── Expedição: área de espera dos paletes prontos (6 vagas no chão) ─────────────────────────
+// Linha A (z = 0.4) e linha B (z = -3.0); as empilhadeiras entram pelo corredor x = 11 e param antes de cada vaga
+const EXP = { slots: [], seq: 0 };
+const NET = { owner: null };                                           // "semáforo": só uma empilhadeira por vez nos corredores compartilhados
+const CORR_X = 11.0, LANE_Z = 4.55, DOCK_Z = -1.3;
+{
+  const yellow = new THREE.MeshStandardMaterial({ color: col(0xd9a21b), roughness: 0.8 });
+  for (const z of [0.4, -3.0]) for (const x of [12.4, 13.7, 15.0]) {
+    const o = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.2), yellow); o.rotation.x = -Math.PI / 2; o.position.set(x, 0.006, z); scene.add(still(o));
+    const i = new THREE.Mesh(new THREE.PlaneGeometry(1.28, 1.08), M.dark); i.rotation.x = -Math.PI / 2; i.position.set(x, 0.008, z); scene.add(still(i));
+    const A = z > 0;                                                       // linha A (norte) ou B (sul)
+    EXP.slots.push({ x, z, insZ: A ? z + 1.15 : z - 1.15, apprZ: A ? z + 1.85 : z - 1.85, face: A ? Math.PI : 0,       // EMP-1, por fora
+      mInsZ: A ? z - 1.15 : z + 1.15, mApprZ: A ? z - 1.85 : z + 1.85, mFace: A ? 0 : Math.PI, pal: null });           // EMP-2, pelo meio
+  }
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: labelTex('EXPEDIÇÃO', 0xe8b82a), transparent: true, depthWrite: false }));
+  s.scale.set(1.9, 0.7, 1); s.position.set(13.7, 2.0, -1.3); scene.add(s);
+  solid(11.7, 15.7, -0.1, 0.95); solid(11.7, 15.7, -3.55, -2.45);
+}
+const expCount = () => EXP.slots.filter(s => s.pal && s.pal !== 'reserved').length;
+const readyPals = () => [PAL.S, PAL.B].filter(P => P.state === 'ready').length;
+function expFreeSlot() {                                               // enche primeiro as vagas perto do corredor
+  return EXP.slots.filter(s => !s.pal).sort((a, b) => a.x - b.x || b.z - a.z)[0] || null;
+}
+function expOldest() {                                                 // primeiro a entrar, primeiro a sair
+  let best = null;
+  for (const s of EXP.slots) if (s.pal && s.pal !== 'reserved' && !s.busy && (!best || s.pal.seq < best.pal.seq)) best = s;
+  return best;
+}
+for (let i = 0; i < 3; i++) {                                          // a expedição já começa com 3 paletes
+  const sl = expFreeSlot(), kind = i === 1 ? 'caixas' : 'sacos', P = { kind };
+  const g = makePalletGroup(); g.position.set(sl.x, 0, sl.z); scene.add(g);
+  for (let k = 0; k < 8; k++) {
+    let m;
+    if (kind === 'sacos') m = makeSack();
+    else { m = new THREE.Mesh(unitBox, boxMats[0]); m.scale.set(0.55, 0.4, 0.45); m.castShadow = true; }
+    m.position.copy(palSlot(P, k)); g.add(m);
+  }
+  sl.pal = { g, n: 8, kind, seq: ++EXP.seq };
+}
+
+// ───────────────────────── Estoque de produto acabado (porta-paletes no fundo do galpão) ─────────────────────────
+// Excedente da expedição vai para cá; quando a expedição esvazia, os paletes voltam do estoque
+const STK = { slots: [], seq: 0, cz: -8.35 };
+const STK_BEAM = [0.45, 1.65, 2.85], STK_DX = [-2.025, -0.675, 0.675, 2.025];
+const AISLE_Z = -6.2, INS_Z = -7.2;                                    // corredor das prateleiras e linha de inserção dos garfos
+{
+  const orange = new THREE.MeshStandardMaterial({ color: col(0xe8731c), metalness: 0.3, roughness: 0.5 });
+  const blue = new THREE.MeshStandardMaterial({ color: col(0x2a62c9), metalness: 0.3, roughness: 0.5 });
+  for (const cx of [5.6, 11.0]) {
+    const g = new THREE.Group(); g.position.set(cx, 0, STK.cz);
+    const bx = (w, h, d, mat, x, y, z) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true; g.add(m); };
+    for (const ux of [-2.7, -1.35, 0, 1.35, 2.7]) for (const s of [-1, 1]) bx(0.08, 3.7, 0.08, orange, ux, 1.85, s * 0.53);
+    for (const y of STK_BEAM) {
+      for (const s of [-1, 1]) bx(5.4, 0.1, 0.06, blue, 0, y, s * 0.53);
+      bx(5.4, 0.03, 1.1, M.wood, 0, y + 0.06, 0);
+    }
+    scene.add(g);
+    solid(cx - 2.8, cx + 2.8, STK.cz - 0.6, STK.cz + 0.6);
+    for (let l = 0; l < 3; l++) for (let i = 0; i < 4; i++) STK.slots.push({ x: cx + STK_DX[i], y: STK_BEAM[l] + 0.075, z: STK.cz, lvl: l, pal: null, busy: false });
+  }
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: labelTex('ESTOQUE', 0xe8b82a), transparent: true, depthWrite: false }));
+  s.scale.set(1.6, 0.6, 1); s.position.set(8.3, 4.5, -8.0); scene.add(s);
+  const line = new THREE.Mesh(new THREE.PlaneGeometry(11.6, 0.1), new THREE.MeshStandardMaterial({ color: col(0xd9a21b), roughness: 0.8 }));
+  line.rotation.x = -Math.PI / 2; line.position.set(8.3, 0.006, -6.9); scene.add(still(line));
+}
+const stockCount = () => STK.slots.filter(s => s.pal && s.pal !== 'reserved').length;
+function stockFreeSlot() {                                              // prefere o andar de baixo e o lado mais perto do corredor
+  let best = null, bs = 1e9;
+  for (const s of STK.slots) if (!s.pal) { const sc = s.lvl * 100 + Math.abs(s.x - CORR_X); if (sc < bs) { bs = sc; best = s; } }
+  return best;
+}
+function stockOldest() {                                                // primeiro a entrar, primeiro a sair
+  let best = null;
+  for (const s of STK.slots) if (s.pal && s.pal !== 'reserved' && !s.busy && (!best || s.pal.seq < best.pal.seq)) best = s;
+  return best;
+}
+for (let i = 0; i < 3; i++) {                                           // o estoque começa com 3 paletes guardados
+  const sl = stockFreeSlot(), kind = i === 1 ? 'caixas' : 'sacos', P = { kind };
+  const g = makePalletGroup(); g.position.set(sl.x, sl.y, sl.z); scene.add(g);
+  for (let k = 0; k < 8; k++) {
+    let m;
+    if (kind === 'sacos') m = makeSack();
+    else { m = new THREE.Mesh(unitBox, boxMats[0]); m.scale.set(0.55, 0.4, 0.45); m.castShadow = true; }
+    m.position.copy(palSlot(P, k)); g.add(m);
+  }
+  sl.pal = { g, n: 8, kind, seq: ++STK.seq };
+}
+
+// ───────────────────────── Empilhadeira ─────────────────────────
+function makeForklift(hex = 0xf0b020) {
+  const g = new THREE.Group();
+  const yel = new THREE.MeshStandardMaterial({ color: col(hex), roughness: 0.5, metalness: 0.3 });
+  const add = (parent, geo, mat, x, y, z) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); parent.add(m); return m; };
+  add(g, new THREE.BoxGeometry(0.95, 0.4, 1.3), yel, 0, 0.42, -0.1);
+  add(g, new THREE.BoxGeometry(0.95, 0.5, 0.4), M.dark, 0, 0.5, -0.65);              // contrapeso
+  for (const sx of [-0.42, 0.42]) for (const z of [0.25, -0.45]) add(g, new THREE.BoxGeometry(0.05, 1.1, 0.05), M.dark, sx, 1.2, z);
+  add(g, new THREE.BoxGeometry(0.98, 0.05, 0.85), M.dark, 0, 1.75, -0.1);            // proteção superior
+  add(g, new THREE.BoxGeometry(0.4, 0.1, 0.35), M.dark, 0, 0.66, -0.3);              // banco
+  add(g, new THREE.BoxGeometry(0.4, 0.4, 0.06), M.dark, 0, 0.9, -0.5);
+  for (const sx of [-0.25, 0.25]) add(g, new THREE.BoxGeometry(0.07, 3.4, 0.07), M.steel, sx, 1.7, 0.55);   // mastro
+  for (const [x, z, r] of [[-0.5, 0.45, 0.22], [0.5, 0.45, 0.22], [-0.47, -0.5, 0.2], [0.47, -0.5, 0.2]]) {
+    const w = add(g, new THREE.CylinderGeometry(r, r, 0.18, 16), M.rubber, x, r, z); w.rotation.z = Math.PI / 2;
+  }
+  const fork = new THREE.Group(); fork.position.set(0, 0.05, 0.62); g.add(fork);      // carro dos garfos (sobe e desce)
+  add(fork, new THREE.BoxGeometry(0.8, 0.4, 0.05), M.steel, 0, 0.2, 0);
+  for (const sx of [-0.28, 0.28]) add(fork, new THREE.BoxGeometry(0.1, 0.04, 1.0), M.steel, sx, 0, 0.53);
+  const driver = makeWorker(0x444b57, 0xf2f2f2);                                      // operador sentado
+  driver.g.position.set(0, -0.02, -0.3);
+  driver.legs.forEach(l => { l.rotation.x = -1.1; });
+  driver.arms.forEach(a => { a.rotation.x = 0.7; });
+  g.add(driver.g);
+  g.traverse(o => { if (o.isMesh) o.castShadow = true; });
+  return { g, fork, driver };
+}
+// duas empilhadeiras: EMP-1 abastece a expedição e EMP-2 carrega o caminhão
+function makeFK(hex, name, park, tagHex) {
+  const f = makeForklift(hex);
+  f.g.position.set(park[0], 0, park[1]); scene.add(f.g);
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: labelTex(name, tagHex), transparent: true, depthWrite: false }));
+  s.scale.set(1.8, 0.67, 1); s.position.set(0, 2.55, 0); f.g.add(s);
+  return { f, name, t: 0, prog: [], cur: null, carry: null, park };
+}
+const FK1 = makeFK(0xf0b020, 'EMP-1 · ABASTECE', [9.6, -4.5], 0xf0b020);
+const FK2 = makeFK(0x3d7ccf, 'EMP-2 · CARREGA', [13.6, DOCK_Z], 0x7ec8ff);
+const FKS = [FK1, FK2];
+FK2.f.g.rotation.y = Math.PI / 2;
+
+
+// ───────────────────────── Batatas: geometria procedural ─────────────────────────
+function hash(x, y, z) { const s = Math.sin(x * 127.1 + y * 311.7 + z * 74.7) * 43758.5453123; return s - Math.floor(s); }
+function vnoise(x, y, z) {
+  const xi = Math.floor(x), yi = Math.floor(y), zi = Math.floor(z);
+  let xf = x - xi, yf = y - yi, zf = z - zi;
+  xf = xf * xf * (3 - 2 * xf); yf = yf * yf * (3 - 2 * yf); zf = zf * zf * (3 - 2 * zf);
+  const l = (a, b, t) => a + (b - a) * t;
+  return l(
+    l(l(hash(xi, yi, zi), hash(xi + 1, yi, zi), xf), l(hash(xi, yi + 1, zi), hash(xi + 1, yi + 1, zi), xf), yf),
+    l(l(hash(xi, yi, zi + 1), hash(xi + 1, yi, zi + 1), xf), l(hash(xi, yi + 1, zi + 1), hash(xi + 1, yi + 1, zi + 1), xf), yf),
+    zf);
+}
+
+// ponto da superfície na direção d: elipsoide deformado por ruído; "crack" escava sulcos (rachaduras)
+function surf(d, sh, out) {
+  let r = 1 + sh.bump * (vnoise(d.x * 1.5 + sh.seed, d.y * 1.5, d.z * 1.5) - 0.5)
+            + sh.bump2 * (vnoise(d.x * 4 + sh.seed * 2, d.y * 4, d.z * 4) - 0.5);
+  if (sh.crack) r -= 0.07 * sh.crack * smooth(0.03, 0, Math.abs(vnoise(d.x * 2.6 + sh.seed * 1.3, d.y * 2.6, d.z * 2.6) - 0.5));
+  const tp = sh.taper ? 1 + 0.12 * d.x : 1;
+  return out.set(d.x * r * sh.sx * tp, d.y * r * sh.sy, d.z * r * sh.sz);
+}
+
+const lin = c => Math.pow(clamp(c, 0, 1), 2.2);
+function shade(sp, d, seed, out) {
+  const n1 = vnoise(d.x * 1.8 + seed, d.y * 1.8 + seed * 0.3, d.z * 1.8);
+  const n2 = vnoise(d.x * 9 + seed * 1.3, d.y * 9, d.z * 9 + seed);
+  if (sp.kind === 'pedra') { const k = 0.40 + 0.25 * n1 - (n2 > 0.7 ? 0.12 : 0); return out.setRGB(lin(k), lin(k * 1.02), lin(k * 1.08)); }
+  if (sp.kind === 'torrao') { const k = 0.24 + 0.16 * n1 - (n2 > 0.72 ? 0.08 : 0); return out.setRGB(lin(k * 1.2), lin(k * 0.8), lin(k * 0.52)); }
+  let r = 0.80 - 0.14 * n1, g = 0.62 - 0.15 * n1, b = 0.38 - 0.10 * n1;
+  if (n2 > 0.78) { r *= 0.72; g *= 0.68; b *= 0.62; }                    // "olhos" da batata
+  const mix = (cr, cg, cb, k) => { r += (cr - r) * k; g += (cg - g) * k; b += (cb - b) * k; };
+  const bad = sp.cls === 'RUIM';
+  switch (sp.defect) {
+    case 'podre':                                                           // podridão escura + manchas esverdeadas
+      mix(0.14, 0.09, 0.06, smooth(0.47, 0.58, vnoise(d.x * 2.4 + seed * 2.1, d.y * 2.4, d.z * 2.4 + seed)) * 0.95);
+      mix(0.30, 0.36, 0.15, smooth(0.60, 0.72, vnoise(d.x * 3.3 + seed * 4.7, d.y * 3.3 + seed, d.z * 3.3)) * 0.8);
+      break;
+    case 'verde': {                                                         // esverdeamento (forte na RUIM, leve na SUSPEITA)
+      const v = vnoise(d.x * 2.8 + seed * 2.1, d.y * 2.8, d.z * 2.8 + seed);
+      mix(0.30, 0.46, 0.13, bad ? smooth(0.30, 0.45, v) * 0.95 : smooth(0.60, 0.70, v) * 0.85);
+      if (bad) mix(0.38, 0.5, 0.18, 0.2);
+      break;
+    }
+    case 'rachada':                                                         // rachaduras escuras
+      mix(0.10, 0.065, 0.04, smooth(0.03, 0, Math.abs(vnoise(d.x * 2.6 + seed * 1.3, d.y * 2.6, d.z * 2.6) - 0.5)) * (bad ? 0.95 : 0.7));
+      break;
+    case 'brotada':                                                         // "olhos" escuros de onde saem os brotos
+      mix(0.25, 0.17, 0.10, smooth(0.66, 0.78, n2) * 0.8);
+      break;
+    case 'pinta':                                                           // pintas escuras
+      mix(0.26, 0.18, 0.11, smooth(0.62, 0.72, vnoise(d.x * 5 + seed * 3.3, d.y * 5, d.z * 5)) * 0.9);
+      break;
+  }
+  return out.setRGB(lin(r), lin(g), lin(b));
+}
+
+function buildGeo(spec) {
+  const stone = spec.kind !== 'normal';
+  const geo = new THREE.SphereGeometry(1, stone ? 24 : 36, stone ? 16 : 24);
+  const pos = geo.attributes.position, nor = geo.attributes.normal;
+  const n = pos.count, colors = new Float32Array(n * 3);
+  const seed = Math.random() * 100;
+  const sh = spec.kind === 'pedra'  ? { seed, sx: rand(0.13, 0.17), sy: rand(0.09, 0.12), sz: rand(0.11, 0.15), bump: 0.7, bump2: 0.45 }
+           : spec.kind === 'torrao' ? { seed, sx: rand(0.16, 0.20), sy: rand(0.10, 0.13), sz: rand(0.14, 0.18), bump: 0.6, bump2: 0.5 }
+           : { seed, sx: rand(0.2, 0.27), sy: rand(0.125, 0.155), sz: rand(0.15, 0.19), bump: 0.30, bump2: 0.12, taper: true,
+               crack: spec.defect === 'rachada' ? (spec.cls === 'RUIM' ? 1 : 0.5) : 0 };
+  const d = new THREE.Vector3(), p = new THREE.Vector3(), p1 = new THREE.Vector3(), p2 = new THREE.Vector3();
+  const t1 = new THREE.Vector3(), t2 = new THREE.Vector3(), a = new THREE.Vector3(), nrm = new THREE.Vector3();
+  const c = new THREE.Color(), eps = 0.02;
+  for (let i = 0; i < n; i++) {
+    d.set(pos.getX(i), pos.getY(i), pos.getZ(i)).normalize();
+    surf(d, sh, p);
+    // normal por diferenças finitas (consistente na costura da esfera)
+    a.set(Math.abs(d.y) < 0.9 ? 0 : 1, Math.abs(d.y) < 0.9 ? 1 : 0, 0);
+    t1.crossVectors(d, a).normalize(); t2.crossVectors(d, t1);
+    surf(a.copy(d).addScaledVector(t1, eps).normalize(), sh, p1);
+    surf(a.copy(d).addScaledVector(t2, eps).normalize(), sh, p2);
+    nrm.crossVectors(p1.sub(p), p2.sub(p)).normalize();
+    if (nrm.dot(p) < 0) nrm.negate();
+    pos.setXYZ(i, p.x, p.y, p.z);
+    nor.setXYZ(i, nrm.x, nrm.y, nrm.z);
+    shade(spec, d, seed, c);
+    colors[i * 3] = c.r; colors[i * 3 + 1] = c.g; colors[i * 3 + 2] = c.b;
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  geo.computeBoundingBox();
+  geo.userData.halfH = geo.boundingBox.max.y;
+  if (spec.defect === 'brotada') {                                         // posição dos brotos (viram filhos da malha ao nascer)
+    const len = spec.cls === 'RUIM' ? 0.13 : 0.055;
+    geo.userData.sprouts = [];
+    for (let k = 0; k < 4; k++) {
+      const dd = new THREE.Vector3(rand(-1, 1), rand(-0.2, 1), rand(-1, 1)).normalize();
+      const pp = surf(dd, sh, new THREE.Vector3());
+      const nn = new THREE.Vector3(pp.x / (sh.sx * sh.sx), pp.y / (sh.sy * sh.sy), pp.z / (sh.sz * sh.sz)).normalize();
+      geo.userData.sprouts.push({ p: pp, n: nn, len: len * rand(0.8, 1.25) });
+    }
+  }
+  return geo;
+}
+
+const RUIM_DEFECTS = ['podre', 'verde', 'rachada', 'brotada'];
+const SUSP_DEFECTS = ['verde', 'rachada', 'brotada', 'pinta'];
+const GEOS = {};
+const buildPool = (key, spec, n) => { GEOS[key] = []; for (let i = 0; i < n; i++) GEOS[key].push(buildGeo(spec)); };
+buildPool('BOA', { cls: 'BOA', defect: 'nenhum', kind: 'normal' }, 6);
+for (const df of RUIM_DEFECTS) buildPool('RUIM:' + df, { cls: 'RUIM', defect: df, kind: 'normal' }, 3);
+for (const df of SUSP_DEFECTS) buildPool('SUSPEITA:' + df, { cls: 'SUSPEITA', defect: df, kind: 'normal' }, 3);
+buildPool('pedra', { cls: 'RUIM', defect: 'pedra', kind: 'pedra' }, 4);
+buildPool('torrao', { cls: 'RUIM', defect: 'torrao', kind: 'torrao' }, 4);
+
+// batatas sujas na entrada; limpas e levemente molhadas depois da lavagem
+const potatoDirty = new THREE.MeshStandardMaterial({ vertexColors: true, color: new THREE.Color(0.78, 0.66, 0.55), roughness: 0.95, metalness: 0 });
+const potatoClean = new THREE.MeshStandardMaterial({ vertexColors: true, color: new THREE.Color(1.15, 1.12, 1.08), roughness: 0.5, metalness: 0 });
+const stoneMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0 });
+const sproutGeo = new THREE.CylinderGeometry(0.35, 1, 1, 6); sproutGeo.translate(0, 0.5, 0);
+const sproutMat = new THREE.MeshStandardMaterial({ color: col(0xe6e2a8), roughness: 0.8 });
+
+// ───────────────────────── Simulação ─────────────────────────
+const live = [];             // batatas em movimento (queda, esteira, voo, na mão de um inspetor)
+let spawnTimer = 0;
+let potatoCount = 0;
+let sacksMade = 0, cartonsMade = 0;
+
+const hudEl = {};
+for (const [k, id] of [['BOA', 'n-boa'], ['RUIM', 'n-ruim'], ['SUSPEITA', 'n-suspeita'], ['CORPO', 'n-corpo'],
+                       ['SACOS', 'n-sacos'], ['CAIXAS', 'n-caixas'], ['PALETES', 'n-paletes'], ['ESTOQUE', 'n-estoque'], ['ACABADO', 'n-acabado'], ['ESTOCADO', 'n-estocado'], ['EVENTOS', 'n-eventos'], ['ERP', 'n-erp']]) hudEl[k] = document.getElementById(id);
+const updateHud = () => {
+  const v = { BOA: counts.BOA, RUIM: counts.RUIM, SUSPEITA: counts.SUSPEITA, CORPO: counts.CORPO, SACOS: sacksMade, CAIXAS: cartonsMade, PALETES: `${TRUCK.count}/${TRUCK.cap}`, ESTOQUE: `${storeCount()} cx · ${bunkerTotal()} bat`, ACABADO: `${expCount()}/${EXP.slots.length}`, ESTOCADO: `${stockCount()}/${STK.slots.length}`, EVENTOS: DATA.eventos.length, ERP: ERP.status === 'conectado' ? 'conectado' : 'offline' };
+  for (const k in hudEl) hudEl[k].textContent = v[k];
+};
+const smoothstep01 = t => { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); };
+const easeIO = t => t < 0.5 ? 2 * t * t : 1 - 2 * (1 - t) * (1 - t);
+const _v = new THREE.Vector3(), _up = new THREE.Vector3(0, 1, 0);
+
+// a batata sai da tremonha (que recebeu a caixa de um fornecedor) e sobe pela esteira alimentadora
+function spawn() {
+  const lot = takeFromBunker(); if (!lot) return false;
+  const S = SUP[lot.si], P = S.perfil, r = Math.random();
+  let cls, defect = 'nenhum', kind = 'normal', key;
+  if (r < P.BOA) { cls = 'BOA'; key = 'BOA'; }
+  else if (r < P.BOA + P.RUIM) { cls = 'RUIM'; defect = pick(RUIM_DEFECTS); key = 'RUIM:' + defect; }
+  else if (r < P.BOA + P.RUIM + P.SUSPEITA) { cls = 'SUSPEITA'; defect = pick(SUSP_DEFECTS); key = 'SUSPEITA:' + defect; }
+  else { kind = pick(['pedra', 'torrao']); cls = 'RUIM'; defect = kind; key = kind; }   // corpo estranho misturado no lote
+  const geo = pick(GEOS[key]);
+  const s = rand(0.8, 1.3);
+  const mesh = new THREE.Mesh(geo, kind === 'normal' ? potatoDirty : stoneMat);
+  mesh.scale.setScalar(s);
+  mesh.castShadow = true;
+  mesh.rotation.order = 'YXZ';
+  mesh.rotation.set(rand(-Math.PI, Math.PI), rand(0, Math.PI * 2), rand(-Math.PI, Math.PI));
+  const sx = FEED.x0 + 0.3;
+  mesh.position.set(sx, LANES.feed.yAt(sx) + 0.6, rand(-0.22, 0.22));
+  if (geo.userData.sprouts) for (const sp of geo.userData.sprouts) {           // brotos
+    const b = new THREE.Mesh(sproutGeo, sproutMat);
+    b.position.copy(sp.p); b.quaternion.setFromUnitVectors(_up, sp.n); b.scale.set(0.028, sp.len, 0.028);
+    mesh.add(b);
+  }
+  scene.add(mesh);
+  const conf = kind !== 'normal' ? rand(0.9, 0.99) : cls === 'BOA' ? rand(0.86, 0.99) : cls === 'RUIM' ? rand(0.8, 0.98) : rand(0.45, 0.7);
+  const peso = Math.round((kind === 'normal' ? 110 : 60) + (s - 0.8) * 320 + rand(-12, 12));
+  S.stat.liberadas++;
+  live.push({
+    id: ++potatoCount, uuid: newUuid(), cls, truth: cls, kind, defect, mesh, s, h: geo.userData.halfH * s,
+    si: lot.si, lote: lot.lote, fornecedor: `${S.id} ${S.nome}`, turno: shiftOf(clock.min),
+    read: null, tScan: null, inspetor: null, insp: null,
+    peso, diam: Math.round(44 + (s - 0.8) * 48 + rand(-1.5, 1.5)), conf,
+    state: 'drop', dropLane: LANES.feed, lane: null, sp: 0, vx: 0, vy: 0, vz: 0, bounces: 0,
+    ang: new THREE.Vector3(rand(-5, 5), rand(-2, 2), rand(-5, 5)),
+    scanned: false, ejected: false, claimed: false, approved: false, washed: false, sized: false, misread: false,
+    bin: null, tlane: null, restY: 0, qLimit: 99,
+    label: null, labelFade: -1,
+  });
+  return true;
+}
+
+const wrap = a => Math.atan2(Math.sin(a), Math.cos(a));
+function spin(p, dt) {
+  const r = p.mesh.rotation;
+  r.x += p.ang.x * dt; r.y += p.ang.y * dt; r.z += p.ang.z * dt;
+}
+
+function addLabel(p) {
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: LABEL_TEX[p.kind !== 'normal' ? 'CORPO' : p.cls], transparent: true, depthWrite: false }));
+  sp.scale.set(p.kind !== 'normal' ? 0.78 : 0.62, 0.23, 1);
+  scene.add(sp);
+  p.label = sp; p.labelFade = -1;
+}
+function dropLabel(p) {
+  if (!p.label) return;
+  scene.remove(p.label); p.label.material.dispose(); p.label = null;
+}
+
+// leitura do sensor: com a calibração caindo, ele erra (BOA vira SUSPEITA; às vezes SUSPEITA passa como BOA)
+function scan(p) {
+  p.scanned = true;
+  if (p.kind === 'normal') {
+    const e = clamp((1 - fault.cal) * 1.2, 0, 0.5);
+    if (p.cls === 'BOA' && Math.random() < e) { p.cls = 'SUSPEITA'; p.misread = true; p.conf = rand(0.5, 0.66); }
+    else if (p.cls === 'SUSPEITA' && Math.random() < e * 0.5) { p.cls = 'BOA'; p.misread = true; p.conf = rand(0.72, 0.9); }
+  }
+  if (p.kind !== 'normal') counts.CORPO++; else counts[p.cls]++;
+  SUP[p.si].stat.leitura[p.kind !== 'normal' ? 'CORPO' : p.cls]++;
+  updateHud();
+  p.read = p.kind !== 'normal' ? 'CORPO' : p.cls; p.tScan = clockStr();
+  logScan(p);
+  screen.last = { cls: p.cls, kind: p.kind, defect: p.defect, s: p.s, peso: p.peso, diam: p.diam, conf: p.conf, misread: p.misread };
+  screen.dirty = true;
+  scanner.flash = 1; scanner.color.setHex(p.kind !== 'normal' ? 0xff9d4d : CLASSES[p.cls].hex);
+  addLabel(p);
+}
+
+// calcula a velocidade inicial para um arremesso balístico que termina em (tx, yEnd, tz)
+function launch(p, tx, tz, yEnd, vy) {
+  const pos = p.mesh.position, G = CFG.gravity;
+  const T = (vy + Math.sqrt(vy * vy + 2 * G * (pos.y - yEnd))) / G;
+  p.vx = (tx - pos.x) / T; p.vz = (tz - pos.z) / T; p.vy = vy;
+  p.state = 'fly'; p.bounces = 0;
+  p.ang.set(rand(-7, 7), rand(-4, 4), rand(-7, 7));
+}
+
+function eject(p, st) {
+  p.ejected = true;
+  const pos = p.mesh.position;
+  if (st.bin) {                                                // caixa de descarte (RUIM) ou de papelão (grandes)
+    const b = st.bin;
+    p.restY = b.floor + p.h + Math.random() * b.pile();
+    if (b.aim) launch(p, b.cx + rand(-0.15, 0.15), b.cz + rand(-0.15, 0.15), p.restY, 2.6);
+    else { launch(p, pos.x, b.cz + rand(-0.45, 0.45), p.restY, 2.6); p.vx = Math.max(p.sp, 0.5); }
+    p.bin = b;
+  } else {                                                     // SUSPEITA: sopro para a esteira da qualidade
+    const L = st.lane;
+    p.tlane = L; p.bin = null;
+    launch(p, L.c + rand(-0.4, 0.4), L.z0 + rand(0.45, 0.9), CFG.beltTop + p.h, 2.4);
+  }
+  st.puffLife = 1; st.lampFlash = 1;
+}
+
+function settle(p) {
+  dropLabel(p);
+  const b = p.bin;
+  p.state = 'binned';
+  if (b.consume) {                                             // entrou na embalagem
+    scene.remove(p.mesh);
+    { SUP[p.si].stat.aprov++; }
+    if (++pack.count >= SACK_N) { pack.count -= SACK_N; pack.pending++; }
+    return;
+  }
+  p.mesh.position.y = p.restY;
+  p.mesh.rotation.set(rand(-0.5, 0.5), rand(0, Math.PI * 2), rand(-0.5, 0.5));
+  { const st = SUP[p.si].stat; if (b === CARTON_IN) st.aprov++; else st.desc++; }
+  b.items.push(p);
+  if (b.items.length > CFG.binCap) { const old = b.items.shift(); scene.remove(old.mesh); }
+  if (b.onSettle) b.onSettle();
+}
+
+function stepPotato(p, dt, v, vm) {
+  const m = p.mesh, pos = m.position, G = CFG.gravity, top = CFG.beltTop;
+
+  if (p.state === 'drop') {
+    const DL = p.dropLane;                                        // esteira em que vai cair (alimentadora ou principal)
+    p.vy -= G * dt;
+    pos.y += p.vy * dt;
+    if (p.bounces > 0) p.vx += (laneSpeed(DL, v, vm) - p.vx) * Math.min(1, 8 * dt);
+    pos.x += p.vx * dt;
+    spin(p, dt);
+    const ground = (DL.yAt ? DL.yAt(pos.x) : top) + p.h;
+    if (p.vy < 0 && pos.y <= ground) {
+      pos.y = ground;
+      if (p.vy < -1.4) { p.vy = -p.vy * 0.25; p.ang.multiplyScalar(0.5); p.bounces++; }
+      else { p.vy = 0; p.state = 'belt'; p.lane = DL; p.sp = p.vx; }
+    }
+    return;
+  }
+
+  if (p.state === 'belt') {
+    const L = p.lane;
+    p.sp += (laneSpeed(L, v, vm) - p.sp) * Math.min(1, 8 * dt);
+    pos.x += L.dx * p.sp * dt; pos.z += L.dz * p.sp * dt;
+    if (L === LANES.q && !p.approved && pos.z > p.qLimit) { pos.z = p.qLimit; p.sp = 0; }   // fila antes da inspeção
+    pos.y = (L.yAt ? L.yAt(pos.x) : top) + p.h;
+    p.ang.multiplyScalar(Math.exp(-6 * dt));
+    spin(p, dt);
+    const k = 1 - Math.exp(-5 * dt), r = m.rotation;
+    const tz = L.tilt || 0; r.x = wrap(r.x) * (1 - k); r.z = tz + wrap(r.z - tz) * (1 - k);                                    // deita na esteira
+    const lat = L.dx ? pos.z : pos.x;
+    const nl = lat + (clamp(lat, L.c - L.hw + 0.22, L.c + L.hw - 0.22) - lat) * Math.min(1, 8 * dt);
+    if (L.dx) pos.z = nl; else pos.x = nl;
+
+    if (L === LANES.feed) {                                        // sobe a alimentadora e cai no funil
+      if (pos.x >= L.x1) { p.state = 'drop'; p.dropLane = LANES.main; p.vx = 0.4; p.vy = 0; p.vz = 0; p.bounces = 1; p.ang.set(rand(-1, 1), rand(-1, 1), rand(-1, 1)); }
+    } else if (L === LANES.main) {
+      if (!p.scanned && pos.x >= CFG.sensorX) scan(p);
+      if (p.scanned && !p.ejected) {
+        for (const st of STATIONS) if (p.cls === st.cls && pos.x >= st.x) { eject(p, st); return; }
+      }
+      if (pos.x >= L.x1) p.lane = LANES.b;
+    } else if (L === LANES.b) {
+      if (pos.z >= L.z1) p.lane = LANES.c;
+    } else if (L === LANES.q) {
+      if (pos.z >= L.z1) p.lane = LANES.c;
+    } else if (L === LANES.c) {
+      if (!p.washed && pos.x >= WASH.cx) { p.washed = true; m.material = potatoClean; }       // sai limpa da lavagem
+      if (!p.sized && pos.x >= STATIONS[2].x) {                                                // calibre: grandes vão para a caixa de papelão
+        p.sized = true;
+        if (p.kind === 'normal' && p.s > LARGE_S && cartonQueue.length < 3) { eject(p, STATIONS[2]); return; }
+      }
+      if (pos.x >= 12.95) {                                                                    // pequenas caem no funil do ensacamento
+        p.state = 'fly'; p.vx = Math.max(p.sp, 0.9); p.vy = 0; p.vz = 0;
+        p.bin = PACK_IN; p.restY = PACK_IN.floor + p.h; p.bounces = 1;
+        p.ang.set(rand(-1, 1), rand(-1, 1), rand(1, 3));
+      }
+    }
+    return;
+  }
+
+  if (p.state === 'fly') {
+    p.vy -= G * dt;
+    pos.x += p.vx * dt; pos.y += p.vy * dt; pos.z += p.vz * dt;
+    spin(p, dt);
+    const b = p.bin;
+    if (b) {
+      if (pos.y < b.wallTop + 0.15 && (!b.aim || (Math.abs(pos.x - b.cx) < 0.9 && Math.abs(pos.z - b.cz) < 0.9))) {   // abaixo da borda: fica dentro da caixa
+        pos.x = clamp(pos.x, b.x0 + 0.15, b.x1 - 0.15);
+        pos.z = clamp(pos.z, b.z0 + 0.15, b.z1 - 0.15);
+      }
+      // sopro fraco demais: caiu de volta na esteira principal
+      if (b === RUIM_BIN && p.vy < 0 && Math.abs(pos.z) < CFG.beltHalfW && pos.x > LANES.main.x0 && pos.x < LANES.main.x1
+          && pos.y <= top + p.h && pos.y > top + p.h - 0.3) {
+        pos.y = top + p.h; p.state = 'belt'; p.lane = LANES.main; p.ejected = false; p.vz = 0; p.vy = 0; p.bin = null;
+        return;
+      }
+      if (p.vy < 0 && pos.y <= p.restY) {
+        pos.y = p.restY;
+        if (p.bounces < 1 && p.vy < -1.3) { p.vy = -p.vy * 0.28; p.vx *= 0.4; p.vz *= 0.4; p.bounces++; p.ang.multiplyScalar(0.5); }
+        else settle(p);
+      }
+    } else if (p.tlane) {                                      // arremesso para uma esteira
+      const L = p.tlane;
+      if (p.vy < 0 && pos.y < top + 0.55) {
+        pos.x = clamp(pos.x, L.x0 + 0.25, L.x1 - 0.25);
+        pos.z = clamp(pos.z, L.z0 + 0.2, L.z1 - 0.2);
+      }
+      if (p.vy < 0 && pos.y <= top + p.h) {
+        pos.y = top + p.h; p.state = 'belt'; p.lane = L; p.tlane = null; p.sp = 0; p.vy = 0; p.vx = p.vz = 0;
+      }
+    }
+  }
+}
+
+// ───────────────────────── Inspetores humanos ─────────────────────────
+function stepInspector(I, dt) {
+  const w = I.w, top = CFG.beltTop, kk = Math.min(1, 8 * dt);
+  w.g.updateMatrixWorld(true);
+  I.t += dt;
+  const aimBoth = (pt, k) => { for (const a of w.arms) aimArm(a, pt, k); };
+  const nod = (tx) => { w.head.rotation.x += (tx - w.head.rotation.x) * kk; };
+
+  switch (I.state) {
+    case 'idle': {
+      relaxArms(w, kk); nod(0);
+      I.cool -= dt;
+      if (I.cool > 0) break;
+      let best = null;                                          // batata mais à frente da fila
+      for (const p of live) {
+        if (p.state === 'belt' && p.lane === LANES.q && !p.approved && !p.claimed && p.mesh.position.z > STOPZ - 1.0
+            && (!best || p.mesh.position.z > best.mesh.position.z)) best = p;
+      }
+      if (best) {
+        I.p = best; best.claimed = true; best.state = 'held';
+        I.from = best.mesh.position.clone();
+        I.pick = new THREE.Vector3(I.side < 0 ? 3.62 : 4.78, top + best.h, clamp(I.z, 3.0, 3.9));
+        I.hold = w.g.localToWorld(new THREE.Vector3(0, 1.22, 0.5));
+        I.dur = rand(2.5, 4.5);
+        I.state = 'pull'; I.t = 0;
+      }
+      break;
+    }
+    case 'pull': {                                              // puxa a batata até a borda da esteira
+      const k = smoothstep01(I.t / 0.55);
+      I.p.mesh.position.lerpVectors(I.from, I.pick, k);
+      aimBoth(I.p.mesh.position, kk); nod(0.2);
+      if (I.t >= 0.55) { I.state = 'lift'; I.t = 0; }
+      break;
+    }
+    case 'lift': {                                              // levanta até a altura do peito
+      const k = smoothstep01(I.t / 0.45);
+      I.p.mesh.position.lerpVectors(I.pick, I.hold, k);
+      aimBoth(I.p.mesh.position, kk); nod(0.2);
+      if (I.t >= 0.45) { I.state = 'examine'; I.t = 0; }
+      break;
+    }
+    case 'examine': {                                           // examina girando na mão
+      const pos = I.p.mesh.position;
+      pos.copy(I.hold); pos.y += Math.sin(I.t * 2.2) * 0.025;
+      I.p.mesh.rotation.y += 2.4 * dt; I.p.mesh.rotation.x += 1.2 * dt;
+      aimBoth(pos, kk); nod(0.35 + 0.12 * Math.sin(I.t * 3));
+      if (I.t >= I.dur) {
+        const ok = Math.random() < (I.p.truth === 'BOA' ? 0.95 : 0.6);   // o humano acerta mais que o sensor
+        I.ok = ok; I.p.cls = ok ? 'BOA' : 'RUIM';
+        I.p.inspetor = INSP_NAMES[inspectors.indexOf(I)]; I.p.insp = ok ? 'aprovada' : 'reprovada';
+        logLabel(I.p, inspectors.indexOf(I));
+        dropLabel(I.p); addLabel(I.p);
+        I.state = 'throw'; I.t = 0; I.thrown = false;
+      }
+      break;
+    }
+    case 'throw': {                                             // joga na caixa ou devolve para a esteira
+      const p = I.p;
+      const dest = I.ok ? _v.set(4.2, top + 0.3, 4.35) : _v.set(I.bin.cx, 0.8, I.bin.cz);
+      aimBoth(dest, Math.min(1, 14 * dt)); nod(0.1);
+      if (!I.thrown && I.t >= 0.2) {
+        I.thrown = true;
+        if (I.ok) {
+          p.approved = true; p.tlane = LANES.q; p.bin = null;
+          launch(p, 4.2 + rand(-0.3, 0.3), 4.35 + rand(-0.08, 0.08), top + p.h, 1.8);
+        } else {
+          p.bin = I.bin; p.restY = I.bin.floor + p.h + Math.random() * I.bin.pile();
+          launch(p, I.bin.cx + rand(-0.2, 0.2), I.bin.cz + rand(-0.2, 0.2), p.restY, 1.6);
+        }
+      }
+      if (I.t >= 0.55) { I.state = 'idle'; I.t = 0; I.cool = rand(0.4, 1.2); I.p = null; }
+      break;
+    }
+  }
+}
+
+// ───────────────────────── Carregador: sacos da mesa para o palete ─────────────────────────
+function stepLoader(dt) {
+  const L = loader, w = L.w, kk = Math.min(1, 8 * dt);
+  w.g.updateMatrixWorld(true);
+  L.t += dt;
+  const aimBoth = (pt, k) => { for (const a of w.arms) aimArm(a, pt, k); };
+  const carry = () => {
+    w.g.localToWorld(_v.set(0, 1.12, 0.45));
+    L.sack.position.copy(_v); L.sack.rotation.set(0, w.g.rotation.y, 0);
+    aimBoth(_v, kk);
+  };
+  const P = PAL.S;
+
+  switch (L.state) {
+    case 'wait':
+      relaxArms(w, kk);
+      if (P.g && P.state === 'filling' && P.items.length < P.cap && pack.table.length > 0) L.state = 'toTable';
+      break;
+    case 'toTable':
+      if (walkTo(w, 15.15, 5.35, dt)) { L.state = 'grab'; L.t = 0; }
+      break;
+    case 'grab':
+      faceTo(w, 15.2, 6.4, kk);
+      aimBoth(pack.table[0].position, kk);
+      if (L.t > 0.45) {
+        L.sack = pack.table.shift(); layoutTable();
+        L.path = [[15.35, 4.7], [15.3, 3.95]];
+        L.state = 'carry';
+      }
+      break;
+    case 'carry': {
+      const t = L.path[0];
+      const arrived = walkTo(w, t[0], t[1], dt, 1.4); carry();
+      if (arrived) { L.path.shift(); if (!L.path.length) { L.state = 'place'; L.t = 0; } }
+      break;
+    }
+    case 'place': {
+      faceTo(w, P.x, P.z, kk);
+      const slot = palSlot(P, P.items.length), world = P.g.localToWorld(slot.clone());
+      L.sack.position.lerp(world, Math.min(1, 10 * dt)); aimBoth(world, kk);
+      if (L.t >= 0.4) {
+        P.g.add(L.sack); L.sack.position.copy(slot); L.sack.rotation.set(0, 0, 0);
+        P.items.push(L.sack); sacksMade++;
+        if (P.items.length >= P.cap) P.state = 'ready';
+        updateHud();
+        L.sack = null;
+        L.path = [[15.35, 4.7], [14.2, 5.25]]; L.state = 'back';
+      }
+      break;
+    }
+    case 'back': {
+      relaxArms(w, kk);
+      const t = L.path[0];
+      if (walkTo(w, t[0], t[1], dt, 1.6)) { L.path.shift(); if (!L.path.length) L.state = 'wait'; }
+      break;
+    }
+  }
+}
+
+// ───────────────────────── Empilhadeiras: EMP-1 abastece (expedição e estoque), EMP-2 carrega o caminhão ─────────────────────────
+// EMP-1 trabalha pelo corredor x = CORR_X (produção, pontas norte/sul da expedição e prateleiras do estoque).
+// EMP-2 trabalha no corredor do meio da expedição (z ≈ -1.3), que termina na doca do caminhão: as duas operam ao mesmo tempo.
+function drive(g, tx, tz, dt, speed) {
+  const dx = tx - g.position.x, dz = tz - g.position.z, d = Math.hypot(dx, dz);
+  if (d < 0.03) return true;
+  const s = Math.min(d, speed * dt);
+  g.position.x += dx / d * s; g.position.z += dz / d * s;
+  return false;
+}
+function turn(g, yaw, dt, rate = 1.6) {
+  const d = wrap(yaw - g.rotation.y);
+  if (Math.abs(d) < 0.01) return true;
+  g.rotation.y += Math.sign(d) * Math.min(Math.abs(d), rate * dt);
+  return false;
+}
+
+// transferências de palete (chamadas pelos programas)
+const FK_FORK_Z = 0.53;                                          // centro do palete em relação ao carro dos garfos
+function fkTakeFromProduction(F, P) {
+  const pg = P.g;
+  F.f.g.updateMatrixWorld(true); pg.updateMatrixWorld(true);
+  F.f.fork.attach(pg); pg.position.set(0, -0.05, FK_FORK_Z);
+  F.carry = { g: pg, n: P.items.length, kind: P.kind };
+  P.g = null; P.items = []; P.state = 'none'; P.timer = 2.5;
+}
+function fkTakeFromSlot(F, sl) {                                 // vale para vaga da expedição e do estoque
+  const pal = sl.pal; sl.pal = null; sl.busy = false;
+  F.f.g.updateMatrixWorld(true); pal.g.updateMatrixWorld(true);
+  F.f.fork.attach(pal.g); pal.g.position.set(0, -0.05, FK_FORK_Z);
+  F.carry = pal; updateHud();
+}
+function fkPlaceInSlot(F, sl, y) {
+  const c = F.carry;
+  F.f.g.updateMatrixWorld(true); c.g.updateMatrixWorld(true);
+  scene.attach(c.g); c.g.position.set(sl.x, y, sl.z); c.g.rotation.set(0, 0, 0);
+  sl.pal = { g: c.g, n: c.n, kind: c.kind, seq: ++EXP.seq };
+  F.carry = null; updateHud();
+}
+const truckSlotX = () => 1.3 + TRUCK.count * 1.25;
+function fkDropInTruck(F) {
+  const c = F.carry, sx = truckSlotX();
+  F.f.g.updateMatrixWorld(true); TRUCK.g.updateMatrixWorld(true); c.g.updateMatrixWorld(true);
+  TRUCK.g.attach(c.g); c.g.position.set(sx, 0.85, 0); c.g.rotation.set(0, -Math.PI / 2, 0);
+  TRUCK.pallets.push(c.g); TRUCK.count++;
+  erpExpedicao({ carga_id: TRUCK.carga || 0, tipo: c.kind, volumes: c.n });
+  F.carry = null; updateHud();
+}
+
+// ---- peças de percurso: o corredor norte-sul fica em x = CORR_X; faixas (lanes) saem dele para os lados
+const PI = Math.PI;
+const T = yaw => ({ k: 'turn', yaw }), D = (x, z, sp) => ({ k: 'drive', x, z, sp }), FORK = (y, dur) => ({ k: 'fork', y, dur }), CALL = fn => ({ k: 'call', fn });
+const ACQ = { k: 'acq' }, REL = { k: 'rel' };
+const corrNS = (fromZ, toZ) => [T(toZ > fromZ ? 0 : PI), D(CORR_X, toZ)];                       // anda pelo corredor
+const leaveCorr = (toX, z) => [T(toX > CORR_X ? PI / 2 : -PI / 2), D(toX, z)];                  // sai do corredor por uma faixa
+const enterCorr = (fromX, z) => [T(fromX > CORR_X ? -PI / 2 : PI / 2), D(CORR_X, z)];           // volta da faixa para o corredor
+const parkOut = F => enterCorr(F.park[0], F.park[1]);
+const parkIn = F => [...leaveCorr(F.park[0], F.park[1]), T(0)];
+const truckX = () => TRUCK.dockX + truckSlotX() - 1.15;
+
+// EMP-1: produção → vaga da expedição (linha A entra pelo norte, linha B pelo sul)
+function feedExp(F, P, sl) {
+  const pz = F.park[1];
+  return [ACQ, ...parkOut(F), ...corrNS(pz, LANE_Z),
+    ...leaveCorr(P.x, LANE_Z), T(PI), FORK(0.05, 0.4), CALL(() => fkTakeFromProduction(F, P)), FORK(0.45, 0.7), ...enterCorr(P.x, LANE_Z),
+    ...corrNS(LANE_Z, sl.apprZ), ...leaveCorr(sl.x, sl.apprZ), T(sl.face), D(sl.x, sl.insZ, 0.8), FORK(0.05, 0.5), CALL(() => fkPlaceInSlot(F, sl, 0)),
+    D(sl.x, sl.apprZ, 0.9), ...enterCorr(sl.x, sl.apprZ), ...corrNS(sl.apprZ, pz), ...parkIn(F), REL];
+}
+// EMP-1: produção → prateleira do estoque (quando a expedição está cheia)
+function feedStock(F, P, sl) {
+  const pz = F.park[1];
+  return [ACQ, ...parkOut(F), ...corrNS(pz, LANE_Z),
+    ...leaveCorr(P.x, LANE_Z), T(PI), FORK(0.05, 0.4), CALL(() => fkTakeFromProduction(F, P)), FORK(0.45, 0.7), ...enterCorr(P.x, LANE_Z),
+    ...corrNS(LANE_Z, AISLE_Z), ...leaveCorr(sl.x, AISLE_Z), T(PI), FORK(sl.y + 0.17, 1.0), D(sl.x, INS_Z, 0.8), FORK(sl.y + 0.05, 0.5),
+    CALL(() => fkPlaceInSlot(F, sl, sl.y)), FORK(sl.y - 0.05, 0.4), D(sl.x, AISLE_Z, 0.9), FORK(0.05, 0.9),
+    ...enterCorr(sl.x, AISLE_Z), ...corrNS(AISLE_Z, pz), ...parkIn(F), REL];
+}
+// EMP-1: estoque → expedição (reabastece quando sobra vaga e não há palete novo)
+function refillExp(F, ss, es) {
+  const pz = F.park[1];
+  return [ACQ, ...parkOut(F), ...corrNS(pz, AISLE_Z),
+    ...leaveCorr(ss.x, AISLE_Z), T(PI), FORK(ss.y + 0.05, 1.0), D(ss.x, INS_Z, 0.8), CALL(() => fkTakeFromSlot(F, ss)), FORK(ss.y + 0.17, 0.5),
+    D(ss.x, AISLE_Z, 0.9), FORK(0.45, 1.0), ...enterCorr(ss.x, AISLE_Z),
+    ...corrNS(AISLE_Z, es.apprZ), ...leaveCorr(es.x, es.apprZ), T(es.face), D(es.x, es.insZ, 0.8), FORK(0.05, 0.5), CALL(() => fkPlaceInSlot(F, es, 0)),
+    D(es.x, es.apprZ, 0.9), ...enterCorr(es.x, es.apprZ), ...corrNS(es.apprZ, pz), ...parkIn(F), REL];
+}
+// EMP-2: expedição → caminhão, tudo pelo corredor do meio (não usa o corredor da EMP-1)
+function shipExp(F, sl) {
+  const px = F.park[0];
+  return [
+    T(sl.x > px ? PI / 2 : -PI / 2), D(sl.x, sl.mApprZ),
+    T(sl.mFace), FORK(0.05, 0.4), D(sl.x, sl.mInsZ, 0.8), CALL(() => fkTakeFromSlot(F, sl)), FORK(0.45, 0.7), D(sl.x, sl.mApprZ, 0.9),
+    T(PI / 2), D(16.0, DOCK_Z, 1.6), D(truckX, DOCK_Z, 1.6), FORK(0.05, 0.7), CALL(() => fkDropInTruck(F)),
+    D(px, DOCK_Z, 1.6), T(PI / 2)];
+}
+// EMP-2: estoque → caminhão (quando a expedição está vazia); aqui ela precisa cruzar o corredor da EMP-1
+function shipStock(F, ss) {
+  const px = F.park[0];
+  return [ACQ, T(-PI / 2), D(CORR_X, DOCK_Z), ...corrNS(DOCK_Z, AISLE_Z),
+    ...leaveCorr(ss.x, AISLE_Z), T(PI), FORK(ss.y + 0.05, 1.0), D(ss.x, INS_Z, 0.8), CALL(() => fkTakeFromSlot(F, ss)), FORK(ss.y + 0.17, 0.5),
+    D(ss.x, AISLE_Z, 0.9), FORK(0.45, 1.0), ...enterCorr(ss.x, AISLE_Z), ...corrNS(AISLE_Z, DOCK_Z),
+    T(PI / 2), REL, D(16.0, DOCK_Z, 1.6), D(truckX, DOCK_Z, 1.6), FORK(0.05, 0.7), CALL(() => fkDropInTruck(F)),
+    D(px, DOCK_Z, 1.6), T(PI / 2)];
+}
+const fkIdle = () => !FK2.cur && !FK2.prog.length;
+function fkPickTask(F) {
+  if (F === FK1) {
+    const P = PAL.S.state === 'ready' ? PAL.S : PAL.B.state === 'ready' ? PAL.B : null;
+    if (P) {
+      const e = expFreeSlot();
+      if (e) { e.pal = 'reserved'; P.state = 'taking'; F.prog = feedExp(F, P, e); return; }
+      const s = stockFreeSlot();
+      if (s) { s.pal = 'reserved'; P.state = 'taking'; F.prog = feedStock(F, P, s); return; }
+      return;                                                     // tudo cheio: o palete espera na produção
+    }
+    const e = expFreeSlot(), s = stockOldest();                   // sem palete novo: repõe a expedição com o estoque
+    if (e && s) { e.pal = 'reserved'; s.busy = true; F.prog = refillExp(F, s, e); }
+  } else if (TRUCK.state === 'docked' && TRUCK.count < TRUCK.cap) {
+    const e = expOldest();
+    if (e) { e.busy = true; F.prog = shipExp(F, e); return; }
+    const s = stockOldest();
+    if (s) { s.busy = true; F.prog = shipStock(F, s); }
+  }
+}
+function stepForklift(F, dt) {
+  const g = F.f.g, fk = F.f.fork;
+  g.position.y = 0.85 * smoothstep01((g.position.x + 0.2 - 15.95) / 0.5);          // rampa da carroceria
+  if (!F.cur) {
+    if (F.prog.length) { F.cur = F.prog.shift(); F.t = 0; }
+    else { fkPickTask(F); return; }
+  }
+  F.t += dt;
+  const s = F.cur; let done = false;
+  switch (s.k) {
+    case 'turn': done = turn(g, s.yaw, dt, s.rate || 1.6); break;
+    case 'drive': done = drive(g, typeof s.x === 'function' ? s.x() : s.x, s.z, dt, s.sp || 1.8); break;
+    case 'fork': {
+      if (s.from === undefined) s.from = fk.position.y;
+      const d = s.dur || 0.7;
+      fk.position.y = s.from + (s.y - s.from) * smoothstep01(F.t / d);
+      done = F.t >= d; break;
+    }
+    case 'call': s.fn(); done = true; break;
+    case 'acq': if (!NET.owner || NET.owner === F) { NET.owner = F; done = true; } break;
+    case 'rel': if (NET.owner === F) NET.owner = null; done = true; break;
+  }
+  if (done) F.cur = null;
+}
+
+function stepPallets(dt) {
+  for (const P of [PAL.S, PAL.B]) if (P.state === 'none') { P.timer -= dt; if (P.timer <= 0) spawnPallet(P); }
+}
+
+// cartão fechado voa da estação do calibre para o palete de caixas
+function closeCarton() {
+  const b = CARTON_IN;
+  for (const it of b.items) scene.remove(it.mesh);
+  b.items.length = 0;
+  const m = new THREE.Mesh(unitBox, boxMats[0]);
+  m.scale.set(0.55, 0.4, 0.45); m.position.set(b.cx, b.floor + 0.2, b.cz); m.castShadow = true;
+  scene.add(m); cartonQueue.push(m);
+}
+CARTON_IN.onSettle = () => { if (CARTON_IN.items.length >= CARTON_CAP) closeCarton(); };
+function stepCartons(dt) {
+  const P = PAL.B;
+  if (cartonQueue.length && P.g && P.state === 'filling' && P.items.length + P.inflight < P.cap) {
+    const m = cartonQueue.shift();
+    const to = P.g.localToWorld(palSlot(P, P.items.length + P.inflight));
+    P.inflight++;
+    cartonAnims.push({ m, from: m.position.clone(), to, t: 0, P });
+  }
+  for (let i = cartonAnims.length - 1; i >= 0; i--) {
+    const a = cartonAnims[i]; a.t += dt / 0.8;
+    const k = Math.min(1, a.t);
+    a.m.position.lerpVectors(a.from, a.to, k); a.m.position.y += Math.sin(Math.PI * k) * 0.5;
+    if (k >= 1) {
+      const P2 = a.P;
+      P2.g.attach(a.m); a.m.position.copy(palSlot(P2, P2.items.length)); a.m.rotation.set(0, 0, 0);
+      P2.items.push(a.m); P2.inflight--; cartonsMade++;
+      if (P2.items.length >= P2.cap) P2.state = 'ready';
+      updateHud();
+      cartonAnims.splice(i, 1);
+    }
+  }
+}
+
+function stepTruck(dt) {
+  const T = TRUCK; T.t += dt;
+  if (T.state === 'docked') { if (T.count >= T.cap && fkIdle()) { T.state = 'full'; T.t = 0; } }
+  else if (T.state === 'full') { if (T.t > 1.0) { T.state = 'leaving'; T.t = 0; } }
+  else if (T.state === 'leaving') {
+    const k = Math.min(1, T.t / 6);
+    T.g.position.x = T.dockX + 60 * easeIO(k);
+    if (k >= 1) { for (const pg of T.pallets) T.g.remove(pg); T.pallets = []; T.count = 0; T.state = 'away'; T.t = 0; updateHud(); }
+  } else if (T.state === 'away') { if (T.t > 3 && expCount() + stockCount() + readyPals() >= T.cap) { T.state = 'arriving'; T.t = 0; T.carga = (T.carga || 0) + 1; } }
+  else if (T.state === 'arriving') {
+    const k = Math.min(1, T.t / 6);
+    T.g.position.x = T.dockX + 60 * (1 - easeIO(k));
+    if (k >= 1) { T.state = 'docked'; T.g.position.x = T.dockX; }
+  }
+}
+
+// ───────────────────────── Quebras: esteira travada e sensor descalibrando ─────────────────────────
+function setAlert(msg) {
+  if (fault.msg === msg) return;
+  fault.msg = msg; alertEl.textContent = msg; alertEl.hidden = !msg;
+}
+function callTech() {
+  fault.called = true;
+  tech.job = fault.active;
+  if (tech.job === 'esteira') { tech.stand = [fault.jamX, 1.75]; tech.aim.set(fault.jamX, CFG.beltTop + 0.1, 0.5); }
+  else { tech.stand = [CFG.sensorX, 1.9]; tech.aim.set(CFG.sensorX, 2.3, 0.9); }
+  tech.state = 'go';
+}
+function stepFault(dt) {
+  const F = fault; F.blink += dt;
+  beaconMat.emissiveIntensity = F.active && Math.sin(F.blink * 9) > 0 ? 2.2 : F.active ? 0.15 : 0;
+  if (!F.active) {
+    F.timer -= dt;
+    if (F.timer <= 0) {
+      F.active = F.next; F.next = F.active === 'esteira' ? 'sensor' : 'esteira'; F.called = false;
+      DATA.incidentes.push({ tipo: F.active, inicio: gameTimeMs(), fim: null });
+      if (F.active === 'esteira') { F.jamX = rand(-5.5, -0.5); callTech(); }
+    }
+  } else if (F.active === 'sensor') {
+    F.cal = Math.max(0.3, F.cal - 0.012 * dt);                  // deriva gradual da calibração
+    if (!F.called && F.cal < 0.75) callTech();
+  }
+  let msg = '';
+  if (F.active === 'esteira') msg = tech.state === 'fix' ? '🔧 Técnico consertando a esteira…' : '⚠ Esteira principal travada — técnico a caminho';
+  else if (F.active === 'sensor' && F.cal < 0.75) msg = tech.state === 'fix' ? '🔧 Técnico recalibrando o sensor…' : `⚠ Sensor descalibrado (${Math.round(F.cal * 100)}%) — técnico a caminho`;
+  setAlert(msg);
+  if (Math.abs(F.cal - screen.calShown) > 0.01) screen.dirty = true;
+}
+function repair() {
+  const T = tech;
+  if (T.job === 'sensor') fault.cal = 1;
+  { const inc = DATA.incidentes[DATA.incidentes.length - 1]; if (inc && !inc.fim) inc.fim = gameTimeMs(); if (inc) erpManut(inc, T.job); }
+  fault.active = null; fault.called = false; fault.timer = rand(90, 150);
+  T.state = 'back'; screen.dirty = true;
+}
+function stepTech(dt) {
+  const T = tech, w = T.w, kk = Math.min(1, 8 * dt);
+  w.g.updateMatrixWorld(true); T.t += dt;
+  w.torso.rotation.x += ((T.state === 'fix' ? 0.75 : 0) - w.torso.rotation.x) * Math.min(1, 6 * dt);
+  sparks.visible = T.state === 'fix';
+  switch (T.state) {
+    case 'wait': relaxArms(w, kk); break;
+    case 'go': if (walkTo(w, T.stand[0], T.stand[1], dt, 1.9)) { T.state = 'fix'; T.t = 0; } break;
+    case 'fix':
+      faceTo(w, T.aim.x, T.aim.z, kk);
+      for (const a of w.arms) aimArm(a, T.aim, kk);
+      for (let i = 0; i < 18; i++) {                            // faíscas
+        sparkArr[i * 3] = T.aim.x + rand(-0.12, 0.12); sparkArr[i * 3 + 1] = T.aim.y + rand(-0.05, 0.2); sparkArr[i * 3 + 2] = T.aim.z + rand(-0.12, 0.12);
+      }
+      sparks.geometry.attributes.position.needsUpdate = true;
+      if (T.t > (T.job === 'esteira' ? 5 : 6)) repair();
+      break;
+    case 'back': relaxArms(w, kk); if (walkTo(w, T.home[0], T.home[1], dt, 1.9)) T.state = 'wait'; break;
+  }
+}
+
+function stepPacker(dt) {
+  pack.flash = Math.max(0, pack.flash - dt * 2);
+  packLampMat.emissiveIntensity = 0.2 + 1.6 * pack.flash;
+  if (pack.pending > 0 && pack.table.length < 4) {
+    pack.pending--;
+    const s = makeSack(); scene.add(s); pack.table.push(s); layoutTable();
+    pack.flash = 1;
+  }
+}
+
+function stepWash(dt) {
+  const pos = washPts.geometry.attributes.position, top = CFG.beltTop;
+  for (let i = 0; i < washVel.length; i++) {
+    let y = pos.getY(i) - washVel[i] * dt;
+    if (y < top + 0.05) { y = top + 0.78; pos.setX(i, rand(WASH.x0 + 0.05, WASH.x1 - 0.05)); pos.setZ(i, rand(WASH.cz - 0.85, WASH.cz + 0.85)); }
+    pos.setY(i, y);
+  }
+  pos.needsUpdate = true;
+  for (const b of washBrushes) b.rotateY(4 * dt);
+}
+
+// ───────────────────────── Recebimento: caminhão do fornecedor, descarga, armazém e alimentação ─────────────────────────
+const activeSup = () => SUP.map((S, i) => ({ S, i })).filter(o => o.S.ativo);
+function nextSupplier() {                                         // revezamento entre os fornecedores com contrato ativo
+  const act = activeSup(); if (!act.length) return -1;
+  const nxt = act.find(o => o.i > RT.last) || act[0];
+  RT.last = nxt.i; return nxt.i;
+}
+const stockCrates = () => storeCount() + bunkerTotal() / CRATE_N + ((RT.state === 'arriving' || RT.state === 'docked') ? RT.crates.length : 0);
+
+function startDelivery() {
+  const si = nextSupplier(); if (si < 0) return;
+  RT.si = si; RT.lote = 'L-' + String(++RT.lotSeq).padStart(3, '0');
+  rtCab.color.copy(col(SUP[si].cor)); rtLogos.forEach(l => { l.material.map = supLogo[si]; });
+  RT.crates = [];
+  for (let i = 0; i < DELIVERY_CRATES; i++) {
+    const c = makeCrate(si, RT.lote);
+    c.xl = 0.9 + (i % 4) * 0.9; c.zl = i < 4 ? -0.5 : 0.5;
+    c.mesh.position.set(c.xl, 0.85 + 0.2, c.zl); RT.g.add(c.mesh); RT.crates.push(c);
+  }
+  RT.state = 'arriving'; RT.t = 0;
+}
+function stepSupplierTruck(dt) {
+  const T = RT; T.t += dt;
+  if (T.state === 'away') {
+    if (T.t > T.cool && stockCrates() <= 8 && activeSup().length) startDelivery();                   // pede lote quando o estoque baixa
+  } else if (T.state === 'arriving') {
+    const k = Math.min(1, T.t / 6);
+    T.g.position.x = T.dockX - 60 * (1 - easeIO(k));
+    if (k >= 1) {
+      T.state = 'docked'; T.t = 0;
+      const S = SUP[T.si];
+      S.stat.entregas++;
+      erpCompra({ lote_id: T.lote, fornecedor_id: S.id, caixas: DELIVERY_CRATES, batatas: DELIVERY_CRATES * CRATE_N });
+    }
+  } else if (T.state === 'docked') {
+    if (T.crates.length === 0 && unl.state === 'wait' && T.t > 1) { T.state = 'leaving'; T.t = 0; }
+  } else if (T.state === 'leaving') {
+    const k = Math.min(1, T.t / 6);
+    T.g.position.x = T.dockX - 60 * easeIO(k);
+    if (k >= 1) { T.state = 'away'; T.t = 0; T.cool = 8; }
+  }
+}
+
+function unloaderTarget(U, c) {
+  const wx = RT.dockX - c.xl, wz = RT.dockZ - c.zl;                // caminhão está girado 180°
+  U.cx = wx; U.cz = wz;
+  return [[-15.4, clamp(wz, 4.0, 5.7)], [wx + 0.75, wz]];
+}
+function stepUnloader(dt) {
+  const U = unl, w = U.w, kk = Math.min(1, 8 * dt);
+  w.g.updateMatrixWorld(true); U.t += dt;
+  const aimBoth = (pt, k) => { for (const a of w.arms) aimArm(a, pt, k); };
+  const ramp = () => { w.g.position.y = 0.85 * smoothstep01((-15.95 - w.g.position.x) / 0.45); };
+  const carry = () => { w.g.localToWorld(_v.set(0, 1.0, 0.5)); U.crate.mesh.position.copy(_v); U.crate.mesh.rotation.set(0, w.g.rotation.y, 0); aimBoth(_v, kk); };
+  switch (U.state) {
+    case 'wait':
+      relaxArms(w, kk);
+      if (RT.state === 'docked' && RT.crates.length > 0 && pickSlotToPlace() >= 0) { U.path = unloaderTarget(U, RT.crates[0]); U.state = 'toTruck'; }
+      break;
+    case 'toTruck':
+      if (followPath(U, dt, 1.6)) { U.state = 'grab'; U.t = 0; }
+      ramp(); break;
+    case 'grab': {
+      faceTo(w, U.cx, U.cz, kk);
+      const c = RT.crates[0];
+      if (!c) { U.state = 'back'; U.path = [[-15.4, 4.8], U.home.slice()]; break; }
+      aimBoth(c.mesh.getWorldPosition(_v), kk);
+      if (U.t > 0.5) {
+        RT.crates.shift(); scene.attach(c.mesh); U.crate = c; U.slot = pickSlotToPlace();
+        U.path = [[-15.4, 4.6], [-12.6, 2.5], [slotXZ(U.slot).x, 2.5]]; U.state = 'carry';
+      }
+      ramp(); break;
+    }
+    case 'carry':
+      carry();
+      if (followPath(U, dt, 1.5)) { U.state = 'place'; U.t = 0; }
+      ramp(); break;
+    case 'place': {
+      const tgt = slotPos(U.slot, store.slots[U.slot].length);
+      faceTo(w, tgt.x, tgt.z, kk);
+      U.crate.mesh.position.lerp(tgt, Math.min(1, 9 * dt)); aimBoth(tgt, kk);
+      if (U.t >= 0.5) {
+        U.crate.mesh.position.copy(tgt); U.crate.mesh.rotation.set(0, 0, 0);
+        store.slots[U.slot].push(U.crate); U.crate = null; updateHud();
+        if (RT.state === 'docked' && RT.crates.length > 0 && pickSlotToPlace() >= 0) { U.path = [[-12.6, 2.5], ...unloaderTarget(U, RT.crates[0])]; U.state = 'toTruck'; }
+        else { U.path = [[-12.6, 2.5], [-15.4, 4.8], U.home.slice()]; U.state = 'back'; }
+      }
+      break;
+    }
+    case 'back':
+      relaxArms(w, kk);
+      if (followPath(U, dt, 1.6)) U.state = 'wait';
+      ramp(); break;
+  }
+}
+
+// o alimentador leva uma caixa do armazém até a tremonha quando ela está ficando vazia
+function stepFeeder(dt) {
+  const F = fdw, w = F.w, kk = Math.min(1, 8 * dt);
+  w.g.updateMatrixWorld(true); F.t += dt;
+  const aimBoth = (pt, k) => { for (const a of w.arms) aimArm(a, pt, k); };
+  const carry = () => { w.g.localToWorld(_v.set(0, 1.0, 0.5)); F.crate.mesh.position.copy(_v); F.crate.mesh.rotation.set(0, w.g.rotation.y, 0); aimBoth(_v, kk); };
+  switch (F.state) {
+    case 'wait':
+      relaxArms(w, kk);
+      if (bunkerTotal() <= 45 && storeCount() > 0) { F.slot = pickSlotToTake(); F.path = [[-12.6, 2.5], [slotXZ(F.slot).x, 2.5]]; F.state = 'toSlot'; }
+      break;
+    case 'toSlot':
+      if (followPath(F, dt, 1.7)) { F.state = 'grab'; F.t = 0; }
+      break;
+    case 'grab': {
+      const sp = slotXZ(F.slot), arr = store.slots[F.slot];
+      faceTo(w, sp.x, sp.z, kk);
+      if (!arr.length) { F.state = 'back'; F.path = [[-12.6, 2.5], F.home.slice()]; break; }
+      aimBoth(arr[arr.length - 1].mesh.position, kk);
+      if (F.t > 0.5) { F.crate = arr.pop(); F.path = [[-12.6, 2.5], [-13.7, 1.6]]; F.state = 'carry'; updateHud(); }
+      break;
+    }
+    case 'carry':
+      carry();
+      if (followPath(F, dt, 1.6)) { F.state = 'dump'; F.t = 0; F.dumped = false; }
+      break;
+    case 'dump':
+      faceTo(w, -13.7, 0, kk); carry();
+      F.crate.mesh.rotation.x = -Math.min(1, F.t / 0.7) * 1.1;                                            // inclina a caixa sobre a tremonha
+      if (!F.dumped && F.t > 0.7) { F.dumped = true; BUN.list.push({ si: F.crate.si, lote: F.crate.lote, n: F.crate.n }); updateHud(); }
+      if (F.t > 1.3) { scene.remove(F.crate.mesh); F.crate = null; F.state = 'back'; F.path = [[-12.9, 2.2], F.home.slice()]; }
+      break;
+    case 'back':
+      relaxArms(w, kk);
+      if (followPath(F, dt, 1.7)) F.state = 'wait';
+      break;
+  }
+}
+
+let recvAcc = 0;
+function stepReceiving(dt) {
+  stepSupplierTruck(dt); stepUnloader(dt); stepFeeder(dt);
+  moundMesh.scale.set(0.82, 0.04 + 0.62 * clamp(bunkerTotal() / BUN.cap, 0, 1.1), 0.82);              // monte de batatas na tremonha
+  recvAcc += dt; if (recvAcc > 0.5) { recvAcc = 0; updateHud(); }
+}
+
+function update(dt) {
+  const v = sim.beltSpeed;
+  const vm = fault.active === 'esteira' ? 0 : v;              // esteira principal travada: só ela para
+
+  for (const a of beltAnim) a.tex.offset.x -= (a.id === 'main' ? vm : a.id === 'feed' ? VF / Math.cos(FEED.ang) : v) * dt / CFG.tile;
+  for (const r of rollers) r.rotateY(-(r.userData.id === 'main' ? vm : v) * dt / 0.17);
+
+  // entrada de batatas
+  spawnTimer -= dt;
+  if (spawnTimer <= 0) {
+    if (vm > 0.05 && live.length < CFG.maxLive && bunkerTotal() > 0) { spawn(); spawnTimer = (1 / sim.rate) * rand(0.6, 1.4); }
+    else spawnTimer = 0.05;
+  }
+
+  // fila na entrada da inspeção: cada batata para atrás da anterior
+  const q = live.filter(p => p.state === 'belt' && p.lane === LANES.q && !p.approved).sort((a, b) => b.mesh.position.z - a.mesh.position.z);
+  q.forEach((p, i) => { p.qLimit = STOPZ - i * 0.38; });
+
+  for (let i = live.length - 1; i >= 0; i--) {
+    const p = live[i];
+    stepPotato(p, dt, v, vm);
+    if (p.state === 'binned') live.splice(i, 1);
+  }
+
+  // afastamento lateral entre batatas da mesma esteira (evita sobreposição)
+  const belt = live.filter(p => p.state === 'belt');
+  for (let i = 0; i < belt.length; i++) for (let j = i + 1; j < belt.length; j++) {
+    const A = belt[i], B = belt[j];
+    if (A.lane !== B.lane) continue;
+    const L = A.lane, a = A.mesh.position, b = B.mesh.position;
+    const along = L.dx ? a.x - b.x : a.z - b.z; if (Math.abs(along) > 0.5) continue;
+    const lat = L.dx ? a.z - b.z : a.x - b.x;
+    const min = 0.36 * (A.s + B.s) / 2, dist = Math.hypot(along, lat);
+    if (dist < min) {
+      const push = (min - dist) * 0.5 * Math.min(1, 10 * dt) * (lat >= 0 ? 1 : -1);
+      if (L.dx) { a.z += push; b.z -= push; } else { a.x += push; b.x -= push; }
+    }
+  }
+
+  // rótulos seguem a batata; somem quando ela cai numa caixa
+  for (const p of live) {
+    if (!p.label) continue;
+    if (p.state === 'fly' && p.bin && p.labelFade < 0) p.labelFade = 0;
+    if (p.labelFade >= 0) {
+      p.labelFade += dt;
+      p.label.material.opacity = Math.max(0, 1 - p.labelFade / 0.5);
+      if (p.labelFade >= 0.5) { dropLabel(p); continue; }
+    }
+    const qp = p.mesh.position;
+    p.label.position.set(qp.x, qp.y + 0.55, qp.z);
+  }
+
+  // efeitos: laser do sensor, sopros de ar, lâmpadas
+  scanner.flash = Math.max(0, scanner.flash - dt * 3);
+  laserMat.color.copy(laserBase).lerp(scanner.color, scanner.flash);
+  laserMat.opacity = 0.35 + 0.55 * scanner.flash;
+  laserLine.material.color.copy(laserMat.color);
+  scanLight.color.copy(scanner.color);
+  scanLight.intensity = scanner.flash * 2.2;
+
+  for (const st of STATIONS) {
+    st.puffLife = Math.max(0, st.puffLife - dt / 0.28);
+    st.puff.visible = st.puffLife > 0;
+    const t = 1 - st.puffLife;
+    st.puffMat.opacity = 0.5 * st.puffLife;
+    st.puff.scale.set(0.5 + t, 0.6 + t * 0.9, 0.5 + t);
+    st.lampFlash = Math.max(0, st.lampFlash - dt * 2);
+    st.lampMat.emissiveIntensity = 0.15 + 1.6 * st.lampFlash;
+  }
+
+  for (const I of inspectors) stepInspector(I, dt);
+  for (const J of janitors) stepJanitor(J, dt);
+  stepLoader(dt); for (const F of FKS) stepForklift(F, dt); stepPallets(dt); stepCartons(dt); stepTruck(dt);
+  stepPacker(dt); stepWash(dt);
+  stepFault(dt); stepTech(dt); stepReceiving(dt); stepERP(dt);
+  screen.acc += dt;
+  if (screen.dirty && screen.acc > 0.1) { screen.acc = 0; drawScreen(); }
+}
+
+// ───────────────────────── Funcionários do descarte ─────────────────────────
+const copyPath = p => p.map(q => q.slice());
+function followPath(E, dt, speed) {
+  const t = E.path[0];
+  if (t && walkTo(E.w, t[0], t[1], dt, speed)) E.path.shift();
+  return E.path.length === 0;
+}
+function stepJanitor(E, dt) {
+  const w = E.w, kk = Math.min(1, 8 * dt);
+  w.g.updateMatrixWorld(true);
+  E.t += dt;
+  for (let i = E.clearing.length - 1; i >= 0; i--) {                  // batatas descartadas encolhem e somem
+    const it = E.clearing[i]; it.k += dt / 0.6;
+    it.p.mesh.scale.setScalar(it.s * Math.max(0.001, 1 - it.k));
+    if (it.k >= 1) { scene.remove(it.p.mesh); E.clearing.splice(i, 1); }
+  }
+  const lean = E.state === 'bend' ? 0.8 : E.state === 'dump' ? 0.5 : 0;
+  w.torso.rotation.x += (lean - w.torso.rotation.x) * Math.min(1, 6 * dt);
+  const aimBoth = (pt, k) => { for (const a of w.arms) aimArm(a, pt, k); };
+  const carryCrate = () => {
+    w.g.localToWorld(_v.set(0, 1.0, 0.5)); E.crate.position.copy(_v); E.crate.rotation.y = w.g.rotation.y; aimBoth(_v, kk);
+  };
+
+  switch (E.state) {
+    case 'wait':
+      relaxArms(w, kk);
+      E.cool -= dt;
+      if (E.cool <= 0 && E.bin.items.length >= E.thr) { E.state = 'toBin'; E.path = copyPath(E.toBin); }
+      break;
+    case 'toBin':
+      if (followPath(E, dt, 1.5)) { E.state = 'bend'; E.t = 0; }
+      break;
+    case 'bend':
+      faceTo(w, E.faceBin[0], E.faceBin[1], kk);
+      aimBoth(_v.set(E.reach[0], E.reach[1], E.reach[2]), kk);
+      if (E.t > 0.9) {
+        for (const p of E.bin.items) E.clearing.push({ p, k: 0, s: p.mesh.scale.x });
+        E.bin.items.length = 0;
+        E.crate.visible = true; E.state = 'carry'; E.t = 0; E.path = copyPath(E.toDump);
+      }
+      break;
+    case 'carry':
+      carryCrate();
+      if (followPath(E, dt, 1.3)) { E.state = 'dump'; E.t = 0; }
+      break;
+    case 'dump':
+      faceTo(w, E.faceDump[0], E.faceDump[1], kk);
+      carryCrate(); E.crate.rotation.x = -Math.min(1, E.t) * 0.9;
+      if (E.t > 1.1) { E.crate.visible = false; E.crate.rotation.x = 0; E.state = 'back'; E.path = copyPath(E.back); }
+      break;
+    case 'back':
+      relaxArms(w, kk);
+      if (followPath(E, dt, 1.5)) { E.state = 'wait'; E.cool = rand(5, 10); }
+      break;
+  }
+}
+
+// ───────────────────────── Relógio do jogo ─────────────────────────
+const $ = id => document.getElementById(id);
+
+const DAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+const clock = { min: 9 * 60, day: 0 };                          // 1 s real a 1x = 1 min de jogo
+function stepClock(dt) {
+  clock.min += dt;
+  while (clock.min >= 1440) { clock.min -= 1440; clock.day++; }
+  const h = clock.min / 60, hh = Math.floor(h), mm = Math.floor(clock.min % 60);
+  $('clk').textContent = `${DAYS[(1 + clock.day) % 7]} ${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+  $('clk-day').textContent = `Dia ${clock.day + 1}`;
+  $('clk-icon').textContent = hh >= 6 && hh < 19 ? '☀' : '☾';
+  applyDay(h);
+}
+
+// velocidade do tempo (⏸ ▶ ▶▶ ▶▶▶)
+sim.speed = 1; let lastSpeed = 1;
+const speedBtns = document.querySelectorAll('[data-speed]');
+function setSpeed(n) {
+  sim.speed = n; if (n > 0) lastSpeed = n;
+  speedBtns.forEach(b => b.classList.toggle('on', +b.dataset.speed === n));
+}
+speedBtns.forEach(b => b.addEventListener('click', () => setSpeed(+b.dataset.speed)));
+setSpeed(1);
+
+// ───────────────────────── Câmera orbital + modo caminhar ─────────────────────────
+const view = { tx: 4.5, ty: 0.9, tz: 2.6, r: 20, theta: -0.3, phi: 0.95 };
+const PRESETS = {
+  geral:   { tx: 4.5,  ty: 0.9, tz: 2.6, r: 20,  theta: -0.3,  phi: 0.95 },
+  sensor:  { tx: -2.0, ty: 1.4, tz: 0,   r: 4.6, theta: 0.85,  phi: 1.25 },
+  triagem: { tx: 3.2,  ty: 0.9, tz: 0,   r: 8.5, theta: 0.15,  phi: 0.95 },
+  qualidade: { tx: 4.6, ty: 1.0, tz: 4.4, r: 8.5, theta: 3.0, phi: 0.95 },
+  lavagem:   { tx: 12.2, ty: 1.3, tz: 6.0, r: 8,  theta: 0.5,  phi: 1.0 },
+  recebimento: { tx: -12.0, ty: 1.2, tz: 2.4, r: 9, theta: 1.1, phi: 0.95 },
+  estoque: { tx: 8.3, ty: 1.4, tz: -7.0, r: 10, theta: 0.3, phi: 0.95 },
+  expedicao: { tx: 14.0, ty: 0.9, tz: -1.5, r: 11, theta: -1.1, phi: 0.95 },
+};
+let goal = null;
+function applyView() {
+  const sp = Math.sin(view.phi);
+  camera.position.set(view.tx + view.r * sp * Math.sin(view.theta), view.ty + view.r * Math.cos(view.phi), view.tz + view.r * sp * Math.cos(view.theta));
+  camera.lookAt(view.tx, view.ty, view.tz);
+}
+function setView(name) { stopFollow(); goal = Object.assign({}, PRESETS[name]); }
+
+const fp = { on: false, yaw: 0, pitch: 0, pos: new THREE.Vector3(-2, 1.7, 5.6), keys: {} };
+const PLAYER_R = 0.3;
+function tryMove(dx, dz) {
+  const nx = clamp(fp.pos.x + dx, -ROOM.x + 0.5, ROOM.x - 0.5), nz = clamp(fp.pos.z + dz, -ROOM.z + 0.5, ROOM.z - 0.5);
+  for (const o of OBST) if (nx > o.x0 - PLAYER_R && nx < o.x1 + PLAYER_R && nz > o.z0 - PLAYER_R && nz < o.z1 + PLAYER_R) return;
+  fp.pos.x = nx; fp.pos.z = nz;
+}
+function walk(dt) {
+  const k = fp.keys;
+  let f = (k.KeyW || k.ArrowUp ? 1 : 0) - (k.KeyS || k.ArrowDown ? 1 : 0);
+  let s = (k.KeyD || k.ArrowRight ? 1 : 0) - (k.KeyA || k.ArrowLeft ? 1 : 0);
+  if (!f && !s) return;
+  const len = Math.hypot(f, s); f /= len; s /= len;
+  const sp = (k.ShiftLeft || k.ShiftRight ? 5.5 : 2.8) * dt, sin = Math.sin(fp.yaw), cos = Math.cos(fp.yaw);
+  tryMove((-sin * f + cos * s) * sp, 0);
+  tryMove(0, (-cos * f - sin * s) * sp);
+}
+function applyFP() {
+  camera.position.copy(fp.pos);
+  camera.rotation.set(fp.pitch, fp.yaw, 0, 'YXZ');
+}
+function toggleWalk() {
+  if (document.pointerLockElement === canvas) document.exitPointerLock();
+  else { goal = null; canvas.requestPointerLock && canvas.requestPointerLock(); }
+}
+document.addEventListener('pointerlockchange', () => {
+  fp.on = document.pointerLockElement === canvas;
+  document.body.classList.toggle('fp', fp.on);
+  fp.keys = {};
+  resize();
+});
+document.addEventListener('mousemove', e => {
+  if (!fp.on) return;
+  fp.yaw -= e.movementX * 0.0022;
+  fp.pitch = clamp(fp.pitch - e.movementY * 0.0022, -1.4, 1.4);
+});
+
+const ptrs = new Map();
+let pinch = 0;
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+canvas.addEventListener('pointerdown', e => {
+  if (fp.on) return;
+  canvas.setPointerCapture(e.pointerId);
+  ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY, pan: e.button === 2 || e.shiftKey });
+  goal = null;
+  if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch = Math.hypot(a.x - b.x, a.y - b.y); }
+});
+canvas.addEventListener('pointermove', e => {
+  const p = ptrs.get(e.pointerId); if (!p) return;
+  const dx = e.clientX - p.x, dy = e.clientY - p.y;
+  p.x = e.clientX; p.y = e.clientY;
+  if (ptrs.size === 2) {
+    const [a, b] = [...ptrs.values()], d = Math.hypot(a.x - b.x, a.y - b.y);
+    if (pinch) view.r = clamp(view.r * pinch / d, 2.5, 30);
+    pinch = d; return;
+  }
+  if (p.pan) {
+    stopFollow();
+    const k = view.r * 0.0016;
+    view.tx += -Math.cos(view.theta) * dx * k + -Math.sin(view.theta) * dy * k;
+    view.tz += Math.sin(view.theta) * dx * k + -Math.cos(view.theta) * dy * k;
+  } else {
+    view.theta -= dx * 0.006;
+    view.phi = clamp(view.phi - dy * 0.006, 0.2, 1.52);
+  }
+});
+const endPtr = e => { ptrs.delete(e.pointerId); pinch = 0; };
+canvas.addEventListener('pointerup', endPtr);
+canvas.addEventListener('pointercancel', endPtr);
+canvas.addEventListener('wheel', e => {
+  e.preventDefault(); if (fp.on) return; goal = null; followZoom = false;
+  view.r = clamp(view.r * Math.exp(e.deltaY * 0.001), 2.5, 30);
+}, { passive: false });
+
+// ───────────────────────── Controles ─────────────────────────
+$('speed').addEventListener('input', e => { sim.beltSpeed = +e.target.value; $('v-speed').textContent = (+e.target.value).toFixed(1); });
+$('rate').addEventListener('input', e => { sim.rate = +e.target.value; $('v-rate').textContent = (+e.target.value).toFixed(1); });
+document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
+$('walk').addEventListener('click', toggleWalk);
+window.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  if (fp.on) { fp.keys[e.code] = true; if (e.code === 'KeyF') toggleWalk(); if (e.code === 'Space') e.preventDefault(); return; }
+  if (e.code === 'Space') { e.preventDefault(); setSpeed(sim.speed === 0 ? lastSpeed : 0); }
+  else if (e.code === 'KeyF') toggleWalk();
+  else if (e.key === '1') setView('geral');
+  else if (e.key === '2') setView('sensor');
+  else if (e.key === '3') setView('triagem');
+  else if (e.key === '4') setView('qualidade');
+  else if (e.key === '5') setView('lavagem');
+  else if (e.key === '6') setView('expedicao');
+  else if (e.key === '7') setView('recebimento');
+  else if (e.key === '8') setView('estoque');
+});
+window.addEventListener('keyup', e => { delete fp.keys[e.code]; });
+
+function resize() {
+  const w = window.innerWidth, h = window.innerHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.fov = fp.on ? 72 : (w / h < 1 ? 62 : 45);            // telas estreitas: mais aberto
+  camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', resize);
+resize();
+
+// ───────────────────────── Interação: ficha da batata, câmera que segue e gargalos ─────────────────────────
+const SUPPLIERS = ['F-01 Fazenda Sol', 'F-02 Agro Vale', 'F-03 Terra Boa'];
+const INSP_NAMES = ['Marcos', 'Ana', 'Beto'];
+const shiftOf = min => { const h = min / 60; return h >= 6 && h < 14 ? 'A' : h >= 14 && h < 22 ? 'B' : 'C'; };
+const clockStr = () => { const m = Math.floor(clock.min); return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`; };
+
+const fichaEl = $('ficha'), fBody = $('f-body'), fTitle = $('f-title'), fTag = $('f-tag'), fFollow = $('f-follow');
+let selected = null, follow = null, followZoom = false, fichaAcc = 0;
+
+// anel que marca a batata selecionada
+const selSprite = new THREE.Sprite(new THREE.SpriteMaterial({
+  map: canvasTex(128, 128, (g, w, h) => {
+    g.strokeStyle = '#ffd24a'; g.lineWidth = 8; g.shadowColor = '#ffd24a'; g.shadowBlur = 14;
+    g.beginPath(); g.arc(w / 2, h / 2, 44, 0, Math.PI * 2); g.stroke();
+  }), transparent: true, depthTest: false, depthWrite: false }));
+selSprite.renderOrder = 9; selSprite.visible = false; scene.add(selSprite);
+
+function whereIs(p) {
+  const name = Object.keys(LANES).find(k => LANES[k] === p.lane), x = p.mesh.position.x;
+  switch (p.state) {
+    case 'drop': return 'Caindo do funil de entrada';
+    case 'held': return 'Nas mãos de um inspetor, sendo examinada';
+    case 'belt':
+      if (name === 'main') return p.scanned ? 'Esteira principal, depois do sensor' : 'Esteira principal, indo ao sensor';
+      if (name === 'feed') return 'Subindo pela esteira alimentadora';
+      if (name === 'b') return 'Curva rumo à lavagem';
+      if (name === 'q') return p.approved ? 'Aprovada: voltando para a linha' : 'Fila da inspeção humana';
+      if (x >= WASH.x0 && x <= WASH.x1) return 'Dentro da lavagem';
+      return p.washed ? 'Depois da lavagem, indo à embalagem' : 'Indo para a lavagem';
+    case 'fly':
+      if (p.bin === PACK_IN) return 'Caindo na máquina de ensacar';
+      return p.bin ? 'Sendo soprada/jogada para uma caixa' : 'Soprada para a esteira da qualidade';
+    case 'binned':
+      if (p.bin === PACK_IN) return 'Embalada em um saco de rede';
+      if (p.bin === RUIM_BIN) return 'Caixa de descarte da triagem';
+      if (p.bin === CARTON_IN) return 'Caixa de papelão (grandes)';
+      return 'Caixa de reprovadas da qualidade';
+  }
+  return '—';
+}
+
+function fichaRows(p) {
+  const stone = p.kind !== 'normal';
+  const cc = c => `<b class="c-${c}">${c}</b>`;
+  const rows = [];
+  rows.push(['Sensor', p.read ? (stone ? '<b class="c-CORPO">CORPO ESTRANHO</b>' : cc(p.read)) + (p.misread ? ' <span class="warn">leitura errada</span>' : '') : 'ainda não escaneada']);
+  rows.push(['Qualidade real', stone ? 'Corpo estranho' : p.truth]);
+  rows.push(['Inspeção humana', p.inspetor ? `${p.inspetor}: ${p.insp}` : p.read === 'SUSPEITA' ? 'pendente' : 'não necessária']);
+  rows.push(['Defeito', DEFECT_NAME[p.defect]]);
+  rows.push(['Peso', `${p.peso} g`]);
+  rows.push(['Diâmetro', `${p.diam} mm${stone ? '' : p.s > LARGE_S ? ' (grande)' : ' (pequena)'}`]);
+  rows.push(['Confiança', `${Math.round(p.conf * 100)}%`]);
+  rows.push(['Lote', p.lote]);
+  rows.push(['Fornecedor', p.fornecedor]);
+  rows.push(['Turno', p.turno]);
+  rows.push(['Escaneada às', p.tScan || '—']);
+  rows.push(['Lavada', stone ? 'não passa pela lavagem' : p.washed ? 'sim' : 'ainda não']);
+  rows.push(['Onde está', whereIs(p)]);
+  return rows;
+}
+function renderFicha() {
+  const p = selected; if (!p) return;
+  fTitle.textContent = `Batata #${String(p.id).padStart(4, '0')}`;
+  const tag = p.kind !== 'normal' ? 'CORPO' : p.cls;
+  fTag.textContent = p.kind !== 'normal' ? (p.kind === 'pedra' ? 'PEDRA' : 'TORRÃO') : p.cls;
+  fTag.className = 'tag c-' + tag;
+  fBody.innerHTML = fichaRows(p).map(([k, v]) => `<div class="r"><dt>${k}</dt><dd>${v}</dd></div>`).join('');
+  fFollow.textContent = follow === p ? 'Parar de seguir' : 'Seguir esta batata';
+  fFollow.classList.toggle('on', follow === p);
+}
+function select(p) {
+  selected = p; fichaEl.hidden = !p; selSprite.visible = !!p;
+  if (!p) stopFollow(); else { renderFicha(); fichaAcc = 0; }
+}
+function startFollow(p) { follow = p; goal = null; followZoom = true; renderFicha(); }
+function stopFollow() { follow = null; if (selected) renderFicha(); }
+function stepFollow(dt) {
+  if (!follow) return;
+  if (follow.state === 'binned' && follow.bin && follow.bin.consume) { stopFollow(); return; }   // virou saco: acabou a jornada
+  const q = follow.mesh.position, k = 1 - Math.exp(-6 * dt);
+  view.tx += (q.x - view.tx) * k; view.ty += (q.y + 0.3 - view.ty) * k; view.tz += (q.z - view.tz) * k;
+  if (followZoom) { view.r += (5.5 - view.r) * (1 - Math.exp(-2.5 * dt)); if (Math.abs(view.r - 5.5) < 0.2) followZoom = false; }
+}
+
+$('f-x').addEventListener('click', () => select(null));
+fFollow.addEventListener('click', () => { if (selected) { follow === selected ? stopFollow() : startFollow(selected); } });
+window.addEventListener('keydown', e => { if (e.code === 'Escape' && selected && !fp.on) select(null); });
+
+// clique / toque: seleciona a batata sob o cursor (ou sob a mira no modo caminhar)
+const ray = new THREE.Raycaster();
+function potatoAt(nx, ny) {
+  const map = new Map();
+  for (const p of live) map.set(p.mesh, p);
+  for (const b of [RUIM_BIN, REJ_W, CARTON_IN]) for (const p of b.items) map.set(p.mesh, p);
+  ray.setFromCamera({ x: nx, y: ny }, camera);
+  const hit = ray.intersectObjects([...map.keys()], true)[0];
+  if (!hit) return null;
+  let o = hit.object; while (o && !map.has(o)) o = o.parent;
+  return o ? map.get(o) : null;
+}
+const ndc = e => { const r = canvas.getBoundingClientRect(); return [((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1]; };
+let down = null, hoverT = 0;
+canvas.addEventListener('pointerdown', e => { if (!fp.on && e.button === 0) down = { x: e.clientX, y: e.clientY, t: performance.now() }; });
+canvas.addEventListener('pointerup', e => {
+  if (!down || fp.on) return;
+  const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y), dt = performance.now() - down.t;
+  down = null;
+  if (moved < 6 && dt < 400) { const [nx, ny] = ndc(e); const p = potatoAt(nx, ny); if (p) select(p); else if (selected) select(null); }
+});
+canvas.addEventListener('pointermove', e => {                                    // mãozinha ao passar sobre uma batata
+  if (fp.on || e.buttons) return;
+  const now = performance.now(); if (now - hoverT < 90) return; hoverT = now;
+  const [nx, ny] = ndc(e); canvas.style.cursor = potatoAt(nx, ny) ? 'pointer' : '';
+});
+document.addEventListener('mousedown', e => {
+  if (!fp.on || e.button !== 0) return;
+  const p = potatoAt(0, 0); select(p);
+});
+
+// ───────────────────────── Gargalos ─────────────────────────
+const warnCache = {};
+const warnTex = (t, hex) => warnCache[t] || (warnCache[t] = labelTex(t, hex));
+function warnSprite(text, hex, sx, sy, x, y, z) {
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: warnTex(text, hex), transparent: true, depthWrite: false }));
+  s.scale.set(sx, sy, 1); s.position.set(x, y, z); s.visible = false; s.renderOrder = 8; scene.add(s); return s;
+}
+const qWarn = warnSprite('⚠ FILA', 0xffc929, 1.4, 0.52, 4.2, 2.4, 3.3);
+const tWarn = warnSprite('⚠ SEM CAMINHÃO', 0xffc929, 1.7, 0.6, 14.4, 2.9, -1.3);
+const pWarn = warnSprite('⚠ MESA CHEIA', 0xffc929, 1.5, 0.55, 15.2, 2.0, 6.4);
+const iWarn = inspectors.map(I => warnSprite('⚠', 0xff6b6b, 0.5, 0.36, I.x, 2.15, I.z));
+const gEl = $('gargalos'), gList = $('g-list');
+let gAcc = 0, gKey = '', gTime = 0;
+
+function bottlenecks() {
+  const out = [];
+  const qn = live.filter(p => p.state === 'belt' && p.lane === LANES.q && !p.approved).length;
+  if (qn >= 7) out.push({ lv: 2, text: `Fila crítica na inspeção (${qn} batatas)`, q: qn });
+  else if (qn >= 4) out.push({ lv: 1, text: `Fila na inspeção (${qn} batatas)`, q: qn });
+  if (pack.table.length >= 4) out.push({ lv: 1, text: 'Mesa de sacos cheia: carregador atrasado', pack: true });
+  if (expCount() + stockCount() >= 4 && TRUCK.state !== 'docked') out.push({ lv: 1, text: `${expCount() + stockCount()} paletes prontos aguardando o caminhão`, truck: true });
+  if (expCount() >= EXP.slots.length - 1 && stockCount() >= STK.slots.length - 1) out.push({ lv: 2, text: 'Expedição e estoque cheios: paletes esperando vaga' });
+  else if (expCount() >= EXP.slots.length) out.push({ lv: 1, text: 'Expedição cheia: paletes indo para o estoque' });
+  if (cartonQueue.length >= 2) out.push({ lv: 1, text: 'Caixas fechadas aguardando palete' });
+  const stock = storeCount() + bunkerTotal() / CRATE_N;
+  if (bunkerTotal() === 0 && storeCount() === 0) out.push({ lv: 2, text: 'Sem matéria-prima: aguardando fornecedor' });
+  else if (bunkerTotal() < 8 && storeCount() > 0) out.push({ lv: 1, text: 'Tremonha vazia: alimentador atrasado' });
+  else if (stock <= 3) out.push({ lv: 1, text: `Estoque baixo (${Math.round(stock * 10) / 10} caixas)` });
+  if (!activeSup().length) out.push({ lv: 2, text: 'Nenhum fornecedor ativo' });
+  if (live.length >= CFG.maxLive * 0.85) out.push({ lv: 1, text: 'Linha lotada de batatas' });
+  return out;
+}
+function stepBottlenecks(dt) {
+  gTime += dt; gAcc += dt;
+  if (gAcc > 0.25) {
+    gAcc = 0;
+    const list = bottlenecks(), key = JSON.stringify(list.map(b => b.text));
+    const q = list.find(b => b.q), has = k => list.some(b => b[k]);
+    qWarn.visible = !!q; if (q) { qWarn.material.map = warnTex(`⚠ FILA ${q.q}`, q.lv === 2 ? 0xff6b6b : 0xffc929); }
+    tWarn.visible = has('truck'); pWarn.visible = has('pack');
+    iWarn.forEach(s => { s.visible = !!q; });
+    if (key !== gKey) {
+      gKey = key; gEl.hidden = list.length === 0;
+      gList.innerHTML = list.map(b => `<li class="lv${b.lv}"><span class="dot" style="background:${b.lv === 2 ? '#ff6b6b' : '#ffc929'}"></span>${b.text}</li>`).join('');
+    }
+  }
+  const pulse = 0.65 + 0.35 * Math.sin(gTime * 6);
+  for (const s of [qWarn, tWarn, pWarn, ...iWarn]) if (s.visible) { s.material.opacity = pulse; }
+  iWarn.forEach((s, i) => { s.position.y = 2.15 + 0.06 * Math.sin(gTime * 5 + i); });
+}
+
+function stepInteract(dt) {
+  if (selected) {
+    const q = selected.mesh.position, k = 1 + 0.12 * Math.sin(gTime * 5);
+    selSprite.position.set(q.x, q.y + 0.02, q.z); selSprite.scale.setScalar(0.85 * k);
+    fichaAcc += dt; if (fichaAcc > 0.2) { fichaAcc = 0; renderFicha(); }
+  }
+  stepBottlenecks(dt);
+  stepForn(dt);
+  stepDados(dt);
+}
+
+// ───────────────────────── Painel de fornecedores: estatísticas e veredito ─────────────────────────
+const fornEl = $('forn'), fornBody = $('forn-body'), fornStock = $('forn-stock'), fornTip = $('forn-tip');
+const pctS = v => Math.round(v * 100) + '%';
+const bar = (v, color) => `<span class="bar"><i style="width:${Math.round(v * 100)}%;background:${color}"></i></span>`;
+
+function supStats() {
+  return SUP.map((S, i) => {
+    const t = S.stat, L = t.leitura, scanned = L.BOA + L.RUIM + L.SUSPEITA + L.CORPO, res = t.aprov + t.desc;
+    return { S, i, scanned, res, L, aprovPct: res ? t.aprov / res : 0 };
+  });
+}
+// veredito pela qualidade: quantas das batatas já resolvidas viraram produto (saco ou caixa) e quantas foram refugo
+function verdicts(list) {
+  const ok = list.filter(o => o.res >= 40);
+  const best = ok.length > 1 ? ok.reduce((a, b) => (b.aprovPct > a.aprovPct ? b : a)) : null;
+  return list.map(o => {
+    if (o.res < 40) return { txt: 'Coletando dados', cls: 'v-wait' };
+    if (o === best) return { txt: 'Melhor aproveitamento', cls: 'v-best' };
+    if (o.aprovPct >= 0.8) return { txt: 'Boa qualidade', cls: 'v-ok' };
+    if (o.aprovPct >= 0.65) return { txt: 'Qualidade regular', cls: 'v-warn' };
+    return { txt: 'Alto refugo', cls: 'v-bad' };
+  });
+}
+function renderForn() {
+  const list = supStats(), vd = verdicts(list);
+  fornBody.innerHTML = list.map((o, k) => {
+    const { S, L } = o, t = S.stat, sc = o.scanned || 1, pc = x => L[x] / sc;
+    const cor = '#' + S.cor.toString(16).padStart(6, '0');
+    return `<tr class="${S.ativo ? '' : 'off'}">
+      <td><span class="dot" style="background:${cor}"></span><b>${S.id}</b> ${S.nome}</td>
+      <td>${o.res}<small> / ${t.liberadas}</small></td>
+      <td>${pctS(pc('BOA'))}${bar(pc('BOA'), '#2fd36b')}</td>
+      <td>${pctS(pc('RUIM'))}</td><td>${pctS(pc('SUSPEITA'))}</td><td>${pctS(pc('CORPO'))}</td>
+      <td>${o.res ? pctS(o.aprovPct) : '—'}${o.res ? bar(o.aprovPct, '#7ec8ff') : ''}</td>
+      <td><span class="verd ${vd[k].cls}">${vd[k].txt}</span></td>
+      <td><button type="button" class="sw ${S.ativo ? 'on' : ''}" data-i="${o.i}">${S.ativo ? 'Ativo' : 'Suspenso'}</button></td>
+    </tr>`;
+  }).join('');
+  const crates = storeCount(), bun = bunkerTotal(), act = activeSup().length;
+  const next = act ? SUP[(activeSup().find(o => o.i > RT.last) || activeSup()[0]).i].nome : '—';
+  fornStock.innerHTML = `<span>Armazém: <b>${crates}</b>/16 caixas</span><span>Tremonha: <b>${bun}</b> batatas</span>
+    <span>Caminhão: <b>${{ away: 'a caminho', arriving: 'chegando', docked: 'descarregando', leaving: 'saindo' }[RT.state] || RT.state}</b></span><span>Próxima entrega: <b>${next}</b></span>`;
+  const ok = list.filter(o => o.res >= 40).sort((a, b) => b.aprovPct - a.aprovPct);
+  if (ok.length >= 2) {
+    const b = ok[0], w = ok[ok.length - 1];
+    fornTip.textContent = `Melhor aproveitamento: ${b.S.nome} (${pctS(b.aprovPct)} das batatas viram produto). ${w.S.nome} aproveita ${pctS(w.aprovPct)}: ${pctS(1 - w.aprovPct)} vira refugo. `
+      + 'Amostras pequenas variam: deixe a linha rodar para os números estabilizarem.';
+  } else fornTip.textContent = 'Deixe a linha rodar: o veredito aparece quando cada fornecedor tiver pelo menos 40 batatas processadas.';
+}
+fornBody.addEventListener('click', e => {
+  const b = e.target.closest('button.sw'); if (!b) return;
+  const S = SUP[+b.dataset.i];
+  if (S.ativo && activeSup().length <= 1) return;                       // mantém ao menos um contrato ativo
+  S.ativo = !S.ativo; renderForn();
+});
+let fornAcc = 0;
+const toggleForn = () => { fornEl.hidden = !fornEl.hidden; if (!fornEl.hidden) renderForn(); };
+$('forn-btn').addEventListener('click', toggleForn);
+$('forn-x').addEventListener('click', () => { fornEl.hidden = true; });
+window.addEventListener('keydown', e => { if (e.code === 'KeyT' && e.target.tagName !== 'INPUT' && !fp.on) toggleForn(); });
+function stepForn(dt) { if (fornEl.hidden) return; fornAcc += dt; if (fornAcc > 0.5) { fornAcc = 0; renderForn(); } }
+
+// ───────────────────────── Dados: um evento por batata, exportável para o pipeline medalhão ─────────────────────────
+const DATA = { eventos: [], rotulos: [], incidentes: [], cap: 400000 };
+const BASE_MS = Date.UTC(2026, 0, 5);                                  // a linha "nasce" numa segunda-feira
+const OPERADORES = { A: 'OP-01', B: 'OP-02', C: 'OP-03' };
+const INSPETORES = ['INS-01', 'INS-02', 'INS-03'];
+const gameTimeMs = () => BASE_MS + clock.day * 86400000 + Math.round(clock.min * 60000);
+const iso = ms => new Date(ms).toISOString();
+function newUuid() {
+  try { if (window.crypto && crypto.randomUUID) return crypto.randomUUID(); } catch (e) { /* contexto sem suporte */ }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3 | 8)).toString(16); });
+}
+
+// matiz (graus) lido pelo sensor: depende do defeito e SOBE quando a calibração cai (deriva)
+function sensorHue(p) {
+  let h = 34 + rand(-1.5, 1.5);
+  if (p.kind === 'pedra') h = 215 + rand(-8, 8);
+  else if (p.kind === 'torrao') h = 24 + rand(-3, 3);
+  else if (p.defect === 'verde') h = (p.truth === 'RUIM' ? 82 : 62) + rand(-4, 4);
+  else if (p.defect === 'podre') h = 18 + rand(-3, 3);
+  else if (p.defect === 'pinta') h = 30 + rand(-2, 2);
+  return +(h + (1 - fault.cal) * 18).toFixed(2);
+}
+function logScan(p) {
+  if (DATA.eventos.length >= DATA.cap) return;
+  const turno = shiftOf(clock.min), stone = p.kind !== 'normal';
+  const area = stone ? 100 : p.truth === 'BOA' ? rand(0, 1.5) : p.truth === 'SUSPEITA' ? rand(4, 14) : rand(22, 70);
+  DATA.eventos.push({
+    batata_id: p.uuid, event_timestamp: gameTimeMs(), linha_id: 'L1', lote_id: p.lote, fornecedor_id: SUP[p.si].id,
+    turno, operador_id: OPERADORES[turno],
+    peso_g: +(p.peso * (1 + rand(-0.01, 0.01))).toFixed(1), diametro_mm: +(p.diam + rand(-0.4, 0.4)).toFixed(1),
+    cor_matiz: sensorHue(p), area_defeito_pct: +area.toFixed(1), velocidade_esteira: +sim.beltSpeed.toFixed(2),
+    classificacao: p.cls, confianca: +p.conf.toFixed(3),
+    tipo_defeito: p.defect, corpo_estranho: stone, sensor_id: 'S1',
+  });
+  erpEvento(DATA.eventos[DATA.eventos.length - 1]);
+}
+function logLabel(p, idx) {
+  DATA.rotulos.push({ batata_id: p.uuid, classificacao_final: p.cls, inspetor_id: INSPETORES[idx], decisao_ts: gameTimeMs() });
+  erpRotulo(DATA.rotulos[DATA.rotulos.length - 1]);
+}
+
+// ---- gerador pseudoaleatório com semente (para o pacote ser reproduzível)
+function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+
+const EV_COLS = ['batata_id', 'event_timestamp', 'linha_id', 'lote_id', 'fornecedor_id', 'turno', 'operador_id', 'peso_g', 'diametro_mm', 'cor_matiz',
+  'area_defeito_pct', 'velocidade_esteira', 'classificacao', 'confianca', 'tipo_defeito', 'corpo_estranho', 'sensor_id'];
+const RT_COLS = ['batata_id', 'classificacao_final', 'inspetor_id', 'rotulo_timestamp'];
+
+// ---- monta o conjunto de dados; com "inject" aplica os problemas de dados do projeto (taxas em %)
+function buildDataset(o, limit) {
+  const rng = mulberry32(o.seed), pickR = a => a[(rng() * a.length) | 0];
+  const base = limit ? DATA.eventos.slice(0, limit) : DATA.eventos;
+  const ids = new Set(base.map(e => e.batata_id));
+  const log = { duplicados: 0, nulos: 0, fora_de_faixa: 0, atrasados_fora_de_ordem: 0, atrasados_proximo_dia: 0 };
+  const rot = DATA.rotulos.filter(r => ids.has(r.batata_id))
+    .map(r => ({ batata_id: r.batata_id, classificacao_final: r.classificacao_final, inspetor_id: r.inspetor_id,
+      rotulo_timestamp: r.decisao_ts + Math.round((2 + rng() * 6) * 3600e3) }));       // rótulo humano chega horas depois (dado tardio)
+  let rows = base.map((e, i) => ({ e: { ...e }, pos: i, late: 0 }));
+  if (o.inject) {
+    const NUL = ['peso_g', 'diametro_mm', 'cor_matiz', 'area_defeito_pct', 'confianca', 'lote_id', 'fornecedor_id'];
+    for (const r of rows) {
+      const e = r.e;
+      if (rng() < o.nulos / 100) { e[pickR(NUL)] = null; log.nulos++; }                       // campo nulo
+      if (rng() < o.fora / 100) {                                                              // valor fora de faixa
+        const k = pickR(['peso_g', 'diametro_mm', 'confianca', 'cor_matiz', 'area_defeito_pct', 'velocidade_esteira']);
+        if (e[k] !== null) {
+          e[k] = { peso_g: -Math.abs(e.peso_g), diametro_mm: 250 + Math.round(rng() * 80), confianca: rng() < 0.5 ? 1.3 : -0.2,
+            cor_matiz: 400, area_defeito_pct: 140, velocidade_esteira: -1 }[k];
+          log.fora_de_faixa++;
+        }
+      }
+      if (rng() < o.atraso / 100) {                                                            // evento atrasado
+        if (rng() < 0.7) { r.pos += 5 + Math.floor(rng() * 300); log.atrasados_fora_de_ordem++; }   // aparece fora de ordem no arquivo
+        else { r.late = 1; log.atrasados_proximo_dia++; }                                          // chega no arquivo do dia seguinte
+      }
+    }
+    const extra = [];
+    rows.forEach((r, i) => {
+      if (rng() < o.dup / 100) {                                                               // duplicata com leitura levemente diferente (mais recente)
+        const d = { ...r.e, event_timestamp: r.e.event_timestamp + 1000 + Math.round(rng() * 4000) };
+        if (d.confianca !== null && d.confianca >= 0 && d.confianca <= 1) d.confianca = +clamp(d.confianca + (rng() * 0.06 - 0.03), 0, 1).toFixed(3);
+        extra.push({ e: d, pos: i + 0.5 + (rng() < 0.5 ? 0 : Math.floor(rng() * 80)), late: 0 }); log.duplicados++;
+      }
+    });
+    rows = rows.concat(extra).sort((a, b) => a.pos - b.pos);
+  }
+  return { rows, rot, log };
+}
+
+// ---- CSV
+const csvCell = v => v === null || v === undefined ? '' : (typeof v === 'string' && /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : String(v));
+const csvLine = (cols, r) => cols.map(c => csvCell(r[c])).join(',');
+const dayOf = ms => iso(ms).slice(0, 10);
+
+function buildPackage(o) {
+  const { rows, rot, log } = buildDataset(o);
+  const files = [];
+  const byDay = {};
+  for (const r of rows) { const d = dayOf(r.e.event_timestamp + r.late * 86400000); (byDay[d] = byDay[d] || []).push(r.e); }
+  for (const d of Object.keys(byDay).sort()) {
+    const lines = byDay[d].map(e => csvLine(EV_COLS, { ...e, event_timestamp: iso(e.event_timestamp) }));
+    files.push({ name: `landing/eventos/data=${d}/eventos.csv`, text: EV_COLS.join(',') + '\n' + lines.join('\n') + '\n' });
+  }
+  const rByDay = {};
+  for (const r of rot) (rByDay[dayOf(r.rotulo_timestamp)] = rByDay[dayOf(r.rotulo_timestamp)] || []).push(r);
+  for (const d of Object.keys(rByDay).sort()) {
+    const lines = rByDay[d].map(r => csvLine(RT_COLS, { ...r, rotulo_timestamp: iso(r.rotulo_timestamp) }));
+    files.push({ name: `landing/inspecao_manual/data=${d}/inspecao_manual.csv`, text: RT_COLS.join(',') + '\n' + lines.join('\n') + '\n' });
+  }
+  files.push({ name: 'landing/dimensoes/dim_fornecedores.csv',
+    text: 'fornecedor_id,nome\n' + SUP.map(S => `${S.id},${S.nome}`).join('\n') + '\n' });
+  files.push({ name: 'landing/dimensoes/dim_turnos.csv', text: 'turno,hora_inicio,hora_fim\nA,06:00,14:00\nB,14:00,22:00\nC,22:00,06:00\n' });
+  files.push({ name: 'landing/dimensoes/dim_operadores.csv',
+    text: 'operador_id,nome,funcao,turno\nOP-01,Carlos,operador_linha,A\nOP-02,Bianca,operador_linha,B\nOP-03,Rafael,operador_linha,C\nINS-01,Marcos,inspetor,\nINS-02,Ana,inspetor,\nINS-03,Beto,inspetor,\n' });
+
+  const stats = supStats();
+  let t0 = null, t1 = null;
+  for (const r of rows) { const t = r.e.event_timestamp; if (t0 === null || t < t0) t0 = t; if (t1 === null || t > t1) t1 = t; }
+  const manifest = {
+    gerado_em: new Date().toISOString(), origem: 'Simulação 3D · Potato Line', semente: o.seed,
+    parametros_injecao: o.inject ? { duplicados_pct: o.dup, nulos_pct: o.nulos, fora_de_faixa_pct: o.fora, atrasados_pct: o.atraso } : null,
+    periodo_simulado: { inicio: t0 && iso(t0), fim: t1 && iso(t1) },
+    contagens: { eventos_limpos: DATA.eventos.length, eventos_no_arquivo: rows.length, rotulos_inspecao: rot.length },
+    problemas_injetados: o.inject ? log : {},
+    problemas_reais_da_fabrica: {
+      deriva_do_sensor: 'cor_matiz sobe até +18 graus quando a calibração cai; a classificação também erra (BOA lida como SUSPEITA e vice-versa)',
+      incidentes: DATA.incidentes.map(i => ({ tipo: i.tipo === 'sensor' ? 'sensor_descalibrado' : 'esteira_travada', inicio: iso(i.inicio), fim: i.fim ? iso(i.fim) : null })),
+      qualidade_por_fornecedor: stats.map(s => ({ fornecedor_id: s.S.id, nome: s.S.nome, batatas_liberadas: s.S.stat.liberadas,
+        pct_boa_lida: +(s.L.BOA / Math.max(1, s.scanned)).toFixed(3), pct_ruim_lida: +(s.L.RUIM / Math.max(1, s.scanned)).toFixed(3) })),
+    },
+  };
+  files.push({ name: 'manifest.json', text: JSON.stringify(manifest, null, 2) + '\n' });
+  files.push({ name: 'README.md', text: readmeText(manifest) });
+  files.push({ name: 'converter_para_parquet.py', text: PY_CONVERSOR });
+  return { files, manifest };
+}
+const PY_CONVERSOR = `"""Converte os CSV de landing/ para Parquet, mantendo a partição por data. Requer: pandas e pyarrow."""
+from pathlib import Path
+
+import pandas as pd
+
+RAIZ = Path(__file__).parent / "landing"
+
+for tabela in ("eventos", "inspecao_manual"):
+    for csv in sorted((RAIZ / tabela).glob("data=*/*.csv")):
+        df = pd.read_csv(csv, parse_dates=[1 if tabela == "eventos" else 3])
+        destino = csv.with_suffix(".parquet")
+        df.to_parquet(destino, index=False)
+        print(destino.relative_to(RAIZ), len(df), "linhas")
+`;
+function readmeText(m) {
+  const inj = m.parametros_injecao;
+  return `# Pacote de dados da simulação (Potato Line)
+
+Gerado pela simulação 3D. Uma linha em \`eventos\` = uma batata lida pelo sensor óptico.
+
+## Estrutura
+- \`landing/eventos/data=AAAA-MM-DD/eventos.csv\`: eventos do sensor, particionados por data.
+- \`landing/inspecao_manual/data=AAAA-MM-DD/inspecao_manual.csv\`: rótulo final dado pelos inspetores às batatas SUSPEITAS, horas depois (dado tardio).
+- \`landing/dimensoes/\`: dim_fornecedores, dim_turnos e dim_operadores.
+- \`manifest.json\`: semente, taxas de injeção, contagens e catálogo de problemas.
+- \`converter_para_parquet.py\`: converte os CSV em Parquet (\`pip install pandas pyarrow\`).
+
+## Colunas de eventos
+batata_id (UUID), event_timestamp (UTC), linha_id, lote_id, fornecedor_id, turno (A/B/C), operador_id, peso_g, diametro_mm,
+cor_matiz (graus), area_defeito_pct, velocidade_esteira (m/s), classificacao (BOA|RUIM|SUSPEITA), confianca (0 a 1),
+tipo_defeito, corpo_estranho (pedra/torrão), sensor_id.
+
+## Problemas de dados
+${inj ? `Injetados de propósito (semente ${m.semente}): duplicados ${inj.duplicados_pct}%, nulos ${inj.nulos_pct}%, valores fora de faixa ${inj.fora_de_faixa_pct}%, eventos atrasados ${inj.atrasados_pct}%.
+Contagem real: ${JSON.stringify(m.problemas_injetados)}.
+- Duplicados: mesmo batata_id com event_timestamp alguns segundos depois (manter o mais recente).
+- Nulos: um campo do evento vem vazio.
+- Fora de faixa: peso negativo, diâmetro acima de 200, confiança fora de 0..1, cor_matiz > 360, área > 100, velocidade negativa.
+- Atrasados: aparecem fora de ordem no arquivo ou no arquivo do dia seguinte.` : 'Esta exportação foi gerada SEM injeção de problemas (dados limpos).'}
+
+Problemas que já existem na própria fábrica: deriva do sensor (cor_matiz sobe e a classificação erra quando a calibração cai) e qualidade diferente por fornecedor. Veja \`manifest.json\`.
+`;
+}
+
+// ---- ZIP simples (sem compressão), para baixar tudo de uma vez
+const _crcT = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function crc32(b) { let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i++) c = _crcT[(c ^ b[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+function makeZip(files) {
+  const enc = new TextEncoder(), chunks = [], central = []; let off = 0;
+  const d = new Date(), dt = (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1), dd = ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate();
+  for (const f of files) {
+    const name = enc.encode(f.name), data = enc.encode(f.text), crc = crc32(data);
+    const lh = new DataView(new ArrayBuffer(30));
+    lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true); lh.setUint16(8, 0, true); lh.setUint16(10, dt, true); lh.setUint16(12, dd, true);
+    lh.setUint32(14, crc, true); lh.setUint32(18, data.length, true); lh.setUint32(22, data.length, true); lh.setUint16(26, name.length, true); lh.setUint16(28, 0, true);
+    chunks.push(new Uint8Array(lh.buffer), name, data);
+    const ch = new DataView(new ArrayBuffer(46));
+    ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true); ch.setUint16(10, 0, true); ch.setUint16(12, dt, true); ch.setUint16(14, dd, true);
+    ch.setUint32(16, crc, true); ch.setUint32(20, data.length, true); ch.setUint32(24, data.length, true); ch.setUint16(28, name.length, true);
+    ch.setUint32(42, off, true);
+    central.push(new Uint8Array(ch.buffer), name);
+    off += 30 + name.length + data.length;
+  }
+  const csize = central.reduce((s, a) => s + a.length, 0);
+  const end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true); end.setUint32(12, csize, true); end.setUint32(16, off, true);
+  return new Blob([...chunks, ...central, new Uint8Array(end.buffer)], { type: 'application/zip' });
+}
+
+// ---- painel
+const dadosEl = $('dados'), dSub = $('dados-sub'), dPrev = $('d-prev');
+const dOpt = () => ({ inject: $('d-inj').checked, dup: +$('d-dup').value, nulos: +$('d-nul').value, fora: +$('d-for').value, atraso: +$('d-atr').value, seed: +$('d-seed').value || 1 });
+function renderDados() {
+  const o = dOpt();
+  for (const [id, v] of [['d-dup', 'd-dup-v'], ['d-nul', 'd-nul-v'], ['d-for', 'd-for-v'], ['d-atr', 'd-atr-v']]) $(v).textContent = $(id).value + '%';
+  const n = DATA.eventos.length, l = DATA.rotulos.length;
+  const t0 = n ? iso(DATA.eventos[0].event_timestamp).replace('T', ' ').slice(0, 16) : '—', t1 = n ? iso(DATA.eventos[n - 1].event_timestamp).replace('T', ' ').slice(0, 16) : '—';
+  dSub.innerHTML = `<b>${n}</b> eventos · <b>${l}</b> rótulos de inspeção · período simulado ${t0} → ${t1}`;
+  const { rows } = buildDataset(o, 400);
+  const cols = ['batata_id', 'event_timestamp', 'lote_id', 'fornecedor_id', 'turno', 'peso_g', 'diametro_mm', 'cor_matiz', 'area_defeito_pct', 'classificacao', 'confianca'];
+  const cell = (c, v) => v === null || v === undefined ? '<i class="nul">nulo</i>' : c === 'batata_id' ? String(v).slice(0, 8) + '…' : c === 'event_timestamp' ? iso(v).slice(5, 19).replace('T', ' ') : v;
+  dPrev.innerHTML = '<thead><tr>' + cols.map(c => `<th>${c}</th>`).join('') + '</tr></thead><tbody>'
+    + rows.slice(0, 7).map(r => '<tr>' + cols.map(c => `<td>${cell(c, r.e[c])}</td>`).join('') + '</tr>').join('') + '</tbody>';
+}
+function baixarPacote() {
+  if (!DATA.eventos.length) { dSub.textContent = 'Ainda não há eventos: deixe a linha rodar alguns segundos.'; return; }
+  const { files } = buildPackage(dOpt());
+  const blob = makeZip(files), a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = 'potato-line-dados.zip';
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+const toggleDados = () => { dadosEl.hidden = !dadosEl.hidden; if (!dadosEl.hidden) renderDados(); };
+$('dados-btn').addEventListener('click', toggleDados);
+$('dados-x').addEventListener('click', () => { dadosEl.hidden = true; });
+$('d-zip').addEventListener('click', baixarPacote);
+$('d-clear').addEventListener('click', () => { DATA.eventos.length = 0; DATA.rotulos.length = 0; DATA.incidentes.length = 0; updateHud(); renderDados(); });
+dadosEl.addEventListener('input', renderDados);
+window.addEventListener('keydown', e => { if (e.code === 'KeyD' && e.target.tagName !== 'INPUT' && !fp.on) toggleDados(); });
+let dadosAcc = 0;
+function stepDados(dt) { if (dadosEl.hidden) return; dadosAcc += dt; if (dadosAcc > 1) { dadosAcc = 0; renderDados(); } }
+
+// ───────────────────────── Integração com o ERP: envia os eventos da fábrica em lotes ─────────────────────────
+// Funciona aberto em http://localhost:3000/sim/ (mesmo servidor) ou direto do arquivo (usa http://localhost:3000).
+// Se o ERP estiver desligado a simulação segue normal e os dados ficam na fila até ele voltar.
+const ERP = {
+  on: false, run: 'r' + Date.now().toString(36), iniciado: new Date().toISOString(), busy: false, status: 'offline', sentDim: false, enviados: 0,
+  url: location.protocol.startsWith('http') ? '/api/ingest' : 'http://localhost:3000/api/ingest',
+  seq: { expedicao: 0, sensor: 0, estoque: 0 }, os: 0, acc: 0,
+  q: { eventos: [], rotulos: [], compras: [], expedicao: [], manutencao: [], sensor: [], estoque: [] },
+};
+const erpFull = () => Object.values(ERP.q).reduce((s, a) => s + a.length, 0);
+const erpPush = (k, row) => { if (!ERP.on) return; if (ERP.q[k].length < 30000) ERP.q[k].push(row); };
+const erpEvento = e => erpPush('eventos', { ...e });
+const erpRotulo = r => erpPush('rotulos', { ...r });
+const erpCompra = c => erpPush('compras', { ...c, ts: gameTimeMs() });
+const erpExpedicao = x => erpPush('expedicao', { ...x, seq: ++ERP.seq.expedicao, ts: gameTimeMs() });
+function erpManut(inc, tipo) {
+  erpPush('manutencao', { os_id: ++ERP.os, tipo: tipo === 'sensor' ? 'sensor_descalibrado' : 'esteira_travada', inicio_ts: inc.inicio, fim_ts: inc.fim });
+}
+function erpStart() {                                        // chamado depois do pré-aquecimento: a partir daqui tudo entra no ERP
+  ERP.on = true;
+  Object.values(ERP.q).forEach(a => { a.length = 0; });
+  updateHud();
+}
+// fotografias periódicas (a cada 5 s de simulação): calibração do sensor e níveis de estoque
+function stepERP(dt) {
+  if (!ERP.on) return;
+  ERP.acc += dt; if (ERP.acc < 5) return; ERP.acc = 0;
+  const ts = gameTimeMs();
+  erpPush('sensor', { seq: ++ERP.seq.sensor, ts, sensor_id: 'S1', calibracao: +fault.cal.toFixed(3) });
+  erpPush('estoque', { seq: ++ERP.seq.estoque, ts, mp_caixas: storeCount(), tremonha: bunkerTotal(), expedicao: expCount(), estoque: stockCount(), caminhao: TRUCK.count });
+}
+async function erpFlush() {
+  if (!ERP.on || ERP.busy) return;
+  const n = erpFull();
+  if (!n && ERP.sentDim) return;
+  ERP.busy = true;
+  const body = { run_id: ERP.run, iniciado_em: ERP.iniciado, ts: gameTimeMs(), ...ERP.q };
+  body.dim = { fornecedores: SUP.map(S => ({ fornecedor_id: S.id, nome: S.nome })) };
+  const sent = {}; for (const k of Object.keys(ERP.q)) sent[k] = ERP.q[k].length;
+  try {
+    const r = await fetch(ERP.url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    for (const k of Object.keys(sent)) ERP.q[k].splice(0, sent[k]);               // só descarta o que foi enviado
+    ERP.sentDim = true; ERP.enviados += sent.eventos; ERP.status = 'conectado';
+  } catch (e) { ERP.status = 'offline'; }
+  ERP.busy = false;
+  const el = document.getElementById('n-erp');
+  if (el) { el.textContent = ERP.status === 'conectado' ? 'conectado' : 'offline'; el.style.color = ERP.status === 'conectado' ? '#6dff9a' : '#ff9d9d'; }
+}
+setInterval(erpFlush, 1000);
+const erpHome = location.protocol.startsWith('http') ? '/' : 'http://localhost:3000/';
+function toast(msg) {
+  let el = document.getElementById('toast');
+  if (!el) { el = document.createElement('div'); el.id = 'toast'; document.body.appendChild(el); }
+  el.textContent = msg; el.classList.add('on');
+  clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('on'), 6500);
+}
+document.getElementById('erp-btn').addEventListener('click', async () => {
+  try {
+    const r = await fetch(erpHome.replace(/\/$/, '') + '/api/health', { signal: AbortSignal.timeout(1500) });
+    if (!r.ok) throw new Error('http ' + r.status);
+    window.open(erpHome, '_blank');
+  } catch (e) {
+    toast('O ERP está desligado. Dê dois cliques em erp/iniciar.bat (ou rode "node server.js" na pasta erp) e tente de novo. A simulação continua e os dados esperam na fila.');
+  }
+});
+
+// ───────────────────────── Loop ─────────────────────────
+// pré-aquece alguns segundos para a linha já aparecer em funcionamento
+for (let i = 0; i < 1500; i++) update(1 / 30);
+DATA.eventos.length = 0; DATA.rotulos.length = 0; DATA.incidentes.length = 0;   // o pré-aquecimento não entra no histórico
+erpStart();
+stepClock(0);
+
+let last = performance.now();
+function frame(now) {
+  requestAnimationFrame(frame);
+  const real = Math.min(0.05, (now - last) / 1000);
+  last = now;
+
+  const total = real * sim.speed;
+  if (total > 0) {
+    const n = Math.ceil(total / 0.034), h = total / n;          // sub-passos mantêm a física estável em 2x/3x
+    for (let i = 0; i < n; i++) update(h);
+    stepClock(total);
+  }
+
+  if (fp.on) { walk(real); applyFP(); }
+  else {
+    stepFollow(real);
+    if (goal) {
+      const k = 1 - Math.exp(-4 * real);
+      for (const key of Object.keys(goal)) view[key] += (goal[key] - view[key]) * k;
+    }
+    applyView();
+  }
+  stepInteract(real);
+  renderer.render(scene, camera);
+}
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
