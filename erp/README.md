@@ -52,9 +52,20 @@ flowchart LR
 | `eventos` | uma linha por batata lida pelo sensor (peso, diâmetro, `cor_matiz`, defeito, classificação, confiança) + rótulo final do inspetor |
 | `compras` | lotes recebidos dos fornecedores (caixas e batatas) |
 | `expedicao` | paletes carregados nos caminhões (tipo e volumes) |
-| `manutencao` | ordens de serviço: esteira travada e sensor descalibrado, com início e fim |
+| `manutencao` | ordens de serviço (esteira travada, sensor descalibrado, refrigeração parada): início, chamado, chegada do técnico, peça usada, espera por peça e fim |
 | `sensor_saude` | calibração do sensor a cada 5 s de simulação |
 | `estoque_snap` | níveis de matéria-prima, tremonha, expedição e estoque acabado |
+| `lab_analises` | análise de cada lote no laboratório: matéria seca, açúcares redutores, umidade e resultado |
+| `armazem_temp` | temperatura do armazém frio, compressor, idade da caixa mais antiga e deterioração (a cada 5 min de fábrica) |
+| `armazem_perdas` | caixas descartadas por deterioração |
+| `rastreio` | um registro por lote em cada palete carregado: palete, carga, lote, batatas, quando foi formado e quando saiu |
+| `utilidades` | energia (kWh) e água (L) consumidas por setor a cada 5 min de fábrica |
+| `pecas` | movimentos do estoque de peças da oficina (consumo, pedido, chegada) |
+| `residuos` | resíduos gerados por origem e destino (ração, compostagem, aterro) e coletas |
+| `processamento` | descasque e corte das batatas de calibre grande: entrada, casca, aparas e saída |
+| `pedidos` / `entregas` | pedidos de clientes com prazo e o que cada carga atendeu |
+| `escala` | trocas de turno e inspetores na sala |
+| `recalls` | recalls simulados no simulador (tecla R) |
 | `dim_fornecedores` | código e nome do fornecedor |
 | `runs` | execuções do simulador |
 
@@ -67,9 +78,18 @@ flowchart LR
 | Qualidade | Qual lote/fornecedor tem o maior refugo e qual a tendência? | `refugo_lote` |
 | | O classificador acerta nas SUSPEITAS? (confiança × rótulo final) | `confusao_suspeitas` |
 | | O sensor está superestimando suspeitas? | `aprovacao_tempo` + `calibracao` |
+| | Por que um lote rende pior? (açúcar do laboratório × refugo) | `lab_lotes`, `lab_fornecedor` |
+| | Se um lote for recolhido, para onde foi? | `rastreio_lotes`, `rastreio_lote` (`?lote=L-005`), `rastreio_cargas`, `recalls_lista` |
 | Compras | Qual fornecedor entrega o maior aproveitamento do peso? Qual gera mais refugo, suspeitas e corpos estranhos? | `fornecedores` |
 | Diretoria | Qual o rendimento da fábrica ao longo do tempo? Quanto foi expedido por hora e quais cargas saíram? | `rendimento_tempo`, `expedicao_tempo`, `expedicao_lista` |
-| Manutenção | O sensor está descalibrando? (média móvel e desvio do `cor_matiz`) | `sensor_cor` + `calibracao` |
+| | Entregamos no prazo? A fila de pedidos cresce? | `otif_resumo`, `pedidos_backlog`, `pedidos_cliente`, `pedidos_lista`, `entregas_lista` |
+| | Quanto gastamos de energia e água, por setor e por kg? | `util_tempo`, `util_setor`, `util_eficiencia` |
+| | Para onde vai o que não vira produto? | `residuos_tempo`, `residuos_destino`, `residuos_origem` |
+| Gerente de produção | Algum turno produz menos ou erra mais? | `turno_resumo`, `turno_inspetor`, `turno_paradas`, `escala_lista` |
+| | Quanto vira produto depois do descasque e do corte? | `proc_etapas`, `proc_lote`, `proc_tempo` |
+| Manutenção | A temperatura do armazém ficou dentro do limite? | `armazem_tempo`, `armazem_resumo`, `armazem_perdas` |
+| | Onde se perde tempo numa falha? MTBF e MTTR? | `manut_kpi`, `pecas_eventos`, `pecas_consumo` |
+| | O sensor está descalibrando? (média móvel e desvio do `cor_matiz`) | `sensor_cor` + `calibracao` |
 | | Quantas paradas e quanto tempo parado? | `paradas` |
 
 As definições estão em `QUERIES` no `server.js`; a resposta de cada `/api/q/<nome>` traz o SQL usado, e a
@@ -86,13 +106,13 @@ antes dessa mudança são migrados sozinhos na inicialização (colunas e tabela
 os eventos são mantidos).
 
 ## Telas
-Painel · Produção · Qualidade · Compras · Diretoria · Manutenção · Estoque e expedição ·
+Painel · Produção · Qualidade · Compras · Diretoria · Manutenção · Estoque e expedição · **Setores da fábrica:** Laboratório · Armazém frio · Rastreabilidade · Energia e água · Oficina e peças · Resíduos · Processamento · Turnos e pessoas · Pedidos e entregas ·
 Tabelas (explorador dos dados brutos) · Consulta SQL (somente leitura, `SELECT`/`WITH`, no máximo 500 linhas).
 
 ## API
 `POST /api/ingest` · `GET /api/runs` · `GET /api/kpis?run=` · `GET /api/q/<consulta>?run=&b=<minutos>` ·
 `GET /api/tabelas` · `GET /api/tabela/<nome>` · `POST /api/sql` · `GET /api/stream` (SSE) · `POST /api/limpar`.
-Parâmetros de tela: `?run=<id>` escolhe a execução e `?anim=0` desliga as animações dos gráficos.
+Parâmetros de tela: `?run=<id>` escolhe a execução, `?lote=L-005` o lote da rastreabilidade e `?anim=0` desliga as animações dos gráficos.
 
 ## Observações
 - O ERP registra os fatos **limpos**, como um sistema transacional. Os problemas de dados do projeto

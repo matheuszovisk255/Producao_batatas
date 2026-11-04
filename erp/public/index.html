@@ -120,7 +120,7 @@ const gridBase = { left: 52, right: 18, top: 62, bottom: 30, containLabel: false
 window.addEventListener('resize', () => document.querySelectorAll('.chart').forEach(el => { const c = echarts.getInstanceByDom(el); if (c) c.resize(); }));
 
 // ───────────────────────── acesso à API ─────────────────────────
-const S = { run: new URLSearchParams(location.search).get('run') || 'auto', page: 'painel', timer: null, es: null };
+const S = { run: new URLSearchParams(location.search).get('run') || 'auto', page: 'painel', timer: null, es: null, lote: new URLSearchParams(location.search).get('lote') || 'L-000' };
 const qs = extra => { const p = new URLSearchParams(extra || {}); if (S.run !== 'auto') p.set('run', S.run); const s = p.toString(); return s ? '?' + s : ''; };
 const api = (path, extra) => fetch(path + qs(extra)).then(r => r.json());
 
@@ -148,7 +148,7 @@ function drawThroughput(el, rows, [paradas]) {
   const ts = Object.keys(by).map(Number).sort((a, b) => a - b), labels = ts.map(fmtT), B = ts.length > 1 ? ts[1] - ts[0] : 1800000;
   const area = (paradas.rows || []).map(p => {
     const a = fmtT(Math.floor(p.inicio_ts / B) * B), b = fmtT(Math.floor(p.fim_ts / B) * B);
-    return labels.includes(a) ? [{ name: p.tipo.replace('_', ' '), xAxis: a, itemStyle: { color: p.tipo === 'esteira_travada' ? 'rgba(255,93,93,.22)' : 'rgba(255,201,41,.18)' } }, { xAxis: labels.includes(b) ? b : a }] : null;
+    return labels.includes(a) ? [{ name: p.tipo.replace(/_/g, ' '), xAxis: a, itemStyle: { color: p.tipo === 'esteira_travada' ? 'rgba(255,93,93,.22)' : p.tipo === 'refrigeracao_falha' ? 'rgba(90,169,255,.20)' : 'rgba(255,201,41,.18)' } }, { xAxis: labels.includes(b) ? b : a }] : null;
   }).filter(Boolean);
   setOpt(el, {
     grid: gridBase, tooltip: { trigger: 'axis' }, xAxis: { type: 'category', data: labels }, yAxis: { type: 'value', name: 'batatas / 30 min' },
@@ -265,7 +265,7 @@ function drawParadas(el, rows) {
   const tipos = Object.keys(por);
   setOpt(el, {
     grid: { ...gridBase, right: 52 }, legend: { top: 2, right: 8 }, tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-    xAxis: { type: 'category', data: tipos.map(t => t.replace('_', ' ')) }, yAxis: [{ type: 'value', name: 'min parados' }, { type: 'value', name: 'ocorrências', splitLine: { show: false }, minInterval: 1 }],
+    xAxis: { type: 'category', data: tipos.map(t => t.replace(/_/g, ' ')) }, yAxis: [{ type: 'value', name: 'min parados' }, { type: 'value', name: 'ocorrências', splitLine: { show: false }, minInterval: 1 }],
     series: [{ name: 'Tempo parado (min de fábrica)', type: 'bar', data: tipos.map(t => +por[t].min.toFixed(1)), itemStyle: { color: '#ff5d5d' }, barMaxWidth: 60 },
       { name: 'Ocorrências', type: 'line', yAxisIndex: 1, data: tipos.map(t => por[t].n), itemStyle: { color: '#ffc929' }, symbolSize: 9 }],
   }, true);
@@ -273,7 +273,7 @@ function drawParadas(el, rows) {
 const tabela = (cols, rows) => rows.length ? `<div class="scroll"><table class="t"><thead><tr>${cols.map(c => `<th class="${c.n ? 'n' : ''}">${c.h}</th>`).join('')}</tr></thead><tbody>`
   + rows.map(r => `<tr>${cols.map(c => `<td class="${c.n ? 'n' : ''}">${c.f ? c.f(r[c.k], r) : esc(r[c.k])}</td>`).join('')}</tr>`).join('') + '</tbody></table></div>' : '';
 function tableParadas(el, rows) {
-  el.innerHTML = tabela([{ h: 'OS', k: 'os_id', n: 1 }, { h: 'Tipo', k: 'tipo', f: v => v.replace('_', ' ') }, { h: 'Início', k: 'inicio_ts', f: fmtT }, { h: 'Duração', k: 'duracao_min', n: 1, f: v => fmtDur(v) }], rows);
+  el.innerHTML = tabela([{ h: 'OS', k: 'os_id', n: 1 }, { h: 'Tipo', k: 'tipo', f: v => v.replace(/_/g, ' ') }, { h: 'Início', k: 'inicio_ts', f: fmtT }, { h: 'Peça', k: 'peca', f: v => v || '—' }, { h: 'Espera de peça', k: 'espera_peca_min', n: 1, f: v => v ? fmtDur(v) : '—' }, { h: 'Duração', k: 'duracao_min', n: 1, f: v => fmtDur(v) }], rows);
 }
 const tableCompras = (el, rows) => { el.innerHTML = tabela([{ h: 'Lote', k: 'lote_id' }, { h: 'Fornecedor', k: 'fornecedor_id', f: (v, r) => `<span style="color:${SUPCOR[v]}">●</span> ${v} ${esc(r.nome)}` }, { h: 'Chegada', k: 'ts', f: fmtT },
   { h: 'Caixas', k: 'caixas', n: 1 }, { h: 'Batatas', k: 'batatas', n: 1 }, { h: 'Já processadas', k: 'processadas', n: 1 }], rows); };
@@ -288,6 +288,213 @@ function drawEstoque(el, rows) {
       { name: 'Estoque acabado (paletes)', type: 'line', step: 'end', symbol: 'none', data: rows.map(r => r.estoque), lineStyle: { color: '#a78bfa' } }],
   }, true);
 }
+
+// ───────────────────────── setores da fábrica ─────────────────────────
+const avg = a => a.length ? a.reduce((s, v) => s + v, 0) / a.length : 0;
+const chip = (txt, cls) => `<span class="verd ${cls}">${esc(txt)}</span>`;
+const RESCLS = { APROVADO: 'v-best', RESSALVA: 'v-warn', REPROVADO: 'v-bad' };
+const PEDCLS = { entregue: 'v-best', aberto: 'v-ok', atrasado: 'v-bad' };
+const SETOR_NOME = { esteiras: 'Esteiras', sensor_triagem: 'Sensor e triagem', lavagem: 'Lavagem', qualidade: 'Sala de qualidade', processamento: 'Processamento', armazem_frio: 'Armazém frio',
+  empilhadeiras: 'Empilhadeiras', iluminacao: 'Iluminação', embalagem: 'Embalagem', laboratorio: 'Laboratório' };
+const DEST_NOME = { racao: 'Ração animal', compostagem: 'Compostagem', aterro: 'Aterro' }, DEST_COR = { racao: '#c79a5b', compostagem: '#6fae4a', aterro: '#8a909a' };
+const TURNO_NOME = { A: 'A · 06h–14h', B: 'B · 14h–22h', C: 'C · 22h–06h' };
+const pl = id => 'PL-' + String(id).padStart(4, '0');
+const kv = (l, v, cls = '') => `<div class="tile"><div class="l">${l}</div><div class="v ${cls}" style="font-size:20px">${v}</div></div>`;
+
+// Laboratório
+function drawLabScatter(el, rows) {
+  const pts = rows.filter(r => r.n >= 10 && r.pct_refugo != null);
+  if (pts.length < 2) { el.innerHTML = '<div class="empty">Poucos lotes processados ainda.<br>Deixe a linha rodar.</div>'; return; }
+  const fs = [...new Set(pts.map(r => r.fornecedor_id))].sort(), xs = pts.map(r => r.acucar_pct), ys = pts.map(r => r.pct_refugo);
+  const mx = avg(xs), my = avg(ys); let sxy = 0, sxx = 0, syy = 0;
+  pts.forEach((r, i) => { sxy += (xs[i] - mx) * (ys[i] - my); sxx += (xs[i] - mx) ** 2; syy += (ys[i] - my) ** 2; });
+  const slope = sxx ? sxy / sxx : 0, b0 = my - slope * mx, r = sxx && syy ? sxy / Math.sqrt(sxx * syy) : 0, x0 = Math.min(...xs), x1 = Math.max(...xs);
+  setOpt(el, {
+    grid: gridBase, legend: { top: 2, right: 8 }, graphic: [{ type: 'text', right: 24, top: 34, style: { text: `correlação r = ${r.toFixed(2)}`, fill: '#9fb0c4', fontSize: 12 } }],
+    tooltip: { formatter: p => p.seriesName === 'tendência' ? '' : `<b>${p.data[2]}</b> · ${p.seriesName}<br>açúcar ${p.data[0]}% · refugo ${p.data[1]}%` },
+    xAxis: { type: 'value', name: 'açúcares redutores (%)', scale: true, nameLocation: 'middle', nameGap: 24 }, yAxis: { type: 'value', name: '% de refugo do lote', scale: true },
+    series: [...fs.map(f => ({ name: f, type: 'scatter', symbolSize: 15, itemStyle: { color: SUPCOR[f], borderColor: '#fff', borderWidth: 1 }, data: pts.filter(p => p.fornecedor_id === f).map(p => [p.acucar_pct, p.pct_refugo, p.lote_id]) })),
+      { name: 'tendência', type: 'line', symbol: 'none', lineStyle: { color: '#e0a34a', type: 'dashed', width: 2 }, data: [[x0, +(slope * x0 + b0).toFixed(1)], [x1, +(slope * x1 + b0).toFixed(1)]] }],
+  }, true);
+}
+const tableLabForn = (el, rows) => { el.innerHTML = tabela([{ h: 'Fornecedor', k: 'fornecedor_id', f: (v, r) => `<span style="color:${SUPCOR[v]}">●</span> <b>${v}</b> ${esc(r.nome)}` }, { h: 'Lotes', k: 'lotes', n: 1 },
+  { h: 'Matéria seca', k: 'materia_seca', n: 1, f: v => v + '%' }, { h: 'Açúcares', k: 'acucar', n: 1, f: v => v + '%' }, { h: 'Umidade', k: 'umidade', n: 1, f: v => v + '%' },
+  { h: 'Aprovados', k: 'aprovados', n: 1 }, { h: 'Ressalvas', k: 'ressalvas', n: 1 }, { h: 'Reprovados', k: 'reprovados', n: 1 }], rows)
+  + `<p class="insight">Quanto mais açúcar redutor e menos matéria seca, mais refugo o lote gera: o laboratório explica o que a tabela de Compras só mostra.</p>`; };
+const tableLabLotes = (el, rows) => { el.innerHTML = tabela([{ h: 'Lote', k: 'lote_id' }, { h: 'Fornecedor', k: 'fornecedor_id', f: v => `<span style="color:${SUPCOR[v]}">●</span> ${v}` }, { h: 'Análise', k: 'ts', f: fmtT },
+  { h: 'M. seca', k: 'materia_seca_pct', n: 1, f: v => v + '%' }, { h: 'Açúcar', k: 'acucar_pct', n: 1, f: v => v + '%' }, { h: 'Umidade', k: 'umidade_pct', n: 1, f: v => v + '%' },
+  { h: 'Resultado', k: 'resultado', f: v => chip(v, RESCLS[v]) }, { h: 'Batatas', k: 'n', n: 1 }, { h: '% refugo', k: 'pct_refugo', n: 1, f: v => v == null ? '—' : v + '%' }], rows.slice().reverse()); };
+
+// Armazém frio
+function drawArmazem(el, rows) {
+  const lab = rows.map(r => fmtT(r.ts)), areas = []; let ini = null;
+  rows.forEach((r, i) => {
+    if (r.falha && ini === null) ini = i;
+    if (ini !== null && (!r.falha || i === rows.length - 1)) { areas.push([{ name: 'compressor parado', xAxis: lab[ini], itemStyle: { color: 'rgba(255,93,93,.16)' } }, { xAxis: lab[i] }]); ini = null; }
+  });
+  setOpt(el, {
+    grid: { ...gridBase, right: 58 }, legend: { top: 2, right: 8 }, tooltip: { trigger: 'axis' }, xAxis: { type: 'category', data: lab },
+    yAxis: [{ type: 'value', name: 'temperatura (°C)', scale: true }, { type: 'value', name: 'deterioração', min: 0, max: 100, splitLine: { show: false }, axisLabel: { formatter: '{value}%' } }],
+    series: [{ name: 'Temperatura do armazém', type: 'line', symbol: 'none', data: rows.map(r => r.temp_c), lineStyle: { color: '#5aa9ff', width: 2 },
+        markArea: { silent: true, data: areas, label: { color: '#ffb3b3', fontSize: 10 } }, markLine: { silent: true, symbol: 'none', data: [{ yAxis: 9, label: { formatter: 'alarme 9 °C', color: '#ff9d9d', position: 'insideStartTop' }, lineStyle: { color: '#ff5d5d', type: 'dashed' } }] } },
+      { name: 'Deterioração da caixa mais afetada', type: 'line', yAxisIndex: 1, symbol: 'none', data: rows.map(r => +(r.deterioracao_max * 100).toFixed(1)), lineStyle: { color: '#e0a34a', width: 2 }, areaStyle: { color: 'rgba(224,163,74,.10)' } }],
+  }, true);
+}
+function htmlFrio(el, rows) {
+  const r = rows[0] || {};
+  el.innerHTML = `<div class="tiles">${kv('Temperatura média', (r.temp_media ?? '—') + ' °C')}${kv('Pico', (r.temp_max ?? '—') + ' °C', r.temp_max > 9 ? 'neg' : '')}${kv('Tempo acima de 9 °C', (r.pct_tempo_acima_9 ?? 0) + '%', r.pct_tempo_acima_9 > 5 ? 'warn' : '')}`
+    + `${kv('Caixa mais antiga', fmtDur(r.idade_max_min || 0))}${kv('Deterioração máxima', Math.round((r.deterioracao_max || 0) * 100) + '%', r.deterioracao_max > 0.5 ? 'warn' : '')}${kv('Caixas descartadas', r.caixas_descartadas ?? 0, r.caixas_descartadas ? 'neg' : '')}</div>`
+    + '<p class="insight">Quando o compressor para, a temperatura sobe e as caixas deterioram bem mais rápido — as batatas dessas caixas viram mais refugo na linha.</p>';
+}
+const tablePerdasFrio = (el, rows) => { el.innerHTML = tabela([{ h: 'Quando', k: 'ts', f: fmtT }, { h: 'Lote', k: 'lote_id' }, { h: 'Fornecedor', k: 'fornecedor_id', f: v => `<span style="color:${SUPCOR[v]}">●</span> ${v}` }, { h: 'Batatas', k: 'batatas', n: 1 }, { h: 'Motivo', k: 'motivo' }], rows); };
+
+// Rastreabilidade
+const sel = v => `<span style="color:#ffc929">${v}</span>`;
+function tableRastroLotes(el, rows) {
+  el.innerHTML = tabela([{ h: 'Lote', k: 'lote_id', f: v => v === S.lote ? sel('▶ ' + v) : v }, { h: 'Paletes', k: 'paletes', n: 1 }, { h: 'Cargas', k: 'cargas', n: 1 }, { h: 'Batatas', k: 'batatas', n: 1 }, { h: 'Primeira saída', k: 'primeira_saida', f: fmtT }, { h: 'Última saída', k: 'ultima_saida', f: fmtT }], rows)
+    ;
+  el.querySelectorAll('tbody tr').forEach((tr, i) => { tr.dataset.lote = rows[i].lote_id; tr.style.cursor = 'pointer'; });
+  el.onclick = e => { const tr = e.target.closest('tr[data-lote]'); if (tr) { S.lote = tr.dataset.lote; refresh(); } };
+}
+const tableRastroLote = (el, rows) => { el.innerHTML = tabela([{ h: 'Palete', k: 'palete_id', f: pl }, { h: 'Carga', k: 'carga_id', n: 1 }, { h: 'Tipo', k: 'tipo' }, { h: 'Batatas do lote', k: 'batatas', n: 1 }, { h: 'Volumes no palete', k: 'volumes', n: 1 },
+  { h: 'Palete formado', k: 'formado_ts', f: v => v ? fmtT(v) : '—' }, { h: 'Carregado', k: 'carregado_ts', f: fmtT }], rows)
+  + `<p class="insight">Se o lote <b>${esc(S.lote)}</b> tivesse que ser recolhido, estes ${new Set(rows.map(r => r.palete_id)).size} paletes já saíram em ${new Set(rows.map(r => r.carga_id)).size} cargas.</p>`; };
+const tableRastroCargas = (el, rows) => { el.innerHTML = tabela([{ h: 'Carga', k: 'carga_id', n: 1 }, { h: 'Saída', k: 'ts', f: fmtT }, { h: 'Paletes', k: 'paletes', n: 1 }, { h: 'Lotes', k: 'lotes', n: 1 }, { h: 'Quais lotes', k: 'lista_lotes' }], rows); };
+const tableRecalls = (el, rows) => { el.innerHTML = tabela([{ h: 'Quando', k: 'ts', f: fmtT }, { h: 'Lote', k: 'lote_id' }, { h: 'Paletes ainda na fábrica', k: 'paletes_na_fabrica', n: 1 }, { h: 'Paletes já expedidos', k: 'paletes_expedidos', n: 1 }, { h: 'Cargas', k: 'cargas' }], rows); };
+
+// Energia e água
+function drawUtilTempo(el, rows) {
+  setOpt(el, {
+    grid: { ...gridBase, right: 58 }, legend: { top: 2, right: 8 }, tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } }, xAxis: { type: 'category', data: rows.map(r => fmtT(r.t)) },
+    yAxis: [{ type: 'value', name: 'kWh' }, { type: 'value', name: 'litros', splitLine: { show: false } }],
+    series: [{ name: 'Energia (kWh)', type: 'bar', data: rows.map(r => r.kwh), itemStyle: { color: '#e0a34a' }, barMaxWidth: 30 },
+      { name: 'Água (L)', type: 'line', yAxisIndex: 1, symbol: 'none', data: rows.map(r => r.agua_l), lineStyle: { color: '#4fd8ff', width: 2.5 } }],
+  }, true);
+}
+function drawUtilSetor(el, rows) {
+  const r = rows.slice().sort((a, b) => a.kwh - b.kwh);
+  setOpt(el, {
+    grid: { ...gridBase, left: 118, right: 70 }, legend: { top: 2, right: 8 }, tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    yAxis: { type: 'category', data: r.map(x => SETOR_NOME[x.setor] || x.setor) }, xAxis: [{ type: 'value', name: 'kWh' }, { type: 'value', name: 'litros', splitLine: { show: false }, position: 'top' }],
+    series: [{ name: 'Energia (kWh)', type: 'bar', data: r.map(x => x.kwh), itemStyle: { color: '#e0a34a' }, barMaxWidth: 18 }, { name: 'Água (L)', type: 'bar', xAxisIndex: 1, data: r.map(x => x.agua_l), itemStyle: { color: '#4fd8ff' }, barMaxWidth: 10 }],
+  }, true);
+}
+function drawUtilEfic(el, rows) {
+  setOpt(el, {
+    grid: { ...gridBase, right: 58 }, legend: { top: 2, right: 8 }, tooltip: { trigger: 'axis' }, xAxis: { type: 'category', data: rows.map(r => fmtT(r.t)) },
+    yAxis: [{ type: 'value', name: 'kWh / kg', scale: true }, { type: 'value', name: 'L / kg', scale: true, splitLine: { show: false } }],
+    series: [{ name: 'kWh por kg', type: 'line', symbolSize: 6, data: rows.map(r => r.kwh_por_kg), itemStyle: { color: '#e0a34a' }, lineStyle: { width: 2.5 } },
+      { name: 'Litros por kg', type: 'line', yAxisIndex: 1, symbolSize: 6, data: rows.map(r => r.l_por_kg), itemStyle: { color: '#4fd8ff' }, lineStyle: { width: 2.5 } }],
+  }, true);
+}
+
+// Oficina e peças
+function drawManutKpi(el, rows) {
+  const t = rows.map(r => r.tipo.replace(/_/g, ' ')), v = k => rows.map(r => r[k] || 0), reparo = rows.map(r => Math.max(0, (r.reparo_min || 0) - (r.espera_peca_min || 0)));
+  setOpt(el, {
+    grid: { ...gridBase, right: 30 }, legend: { top: 2, right: 8 }, tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, valueFormatter: x => Math.round(x * 10) / 10 + ' min' },
+    xAxis: { type: 'category', data: t }, yAxis: { type: 'value', name: 'minutos (média por ocorrência)' },
+    series: [['Até alguém perceber', 'deteccao_min', '#a78bfa'], ['Técnico a caminho', 'deslocamento_min', '#5aa9ff'], ['Espera por peça', 'espera_peca_min', '#ff5d5d']].map(([n, k, c]) => ({ name: n, type: 'bar', stack: 'm', data: v(k), itemStyle: { color: c }, barMaxWidth: 70 }))
+      .concat([{ name: 'Reparo', type: 'bar', stack: 'm', data: reparo, itemStyle: { color: '#2fd36b' }, barMaxWidth: 70 }]),
+  }, true);
+}
+const tableManutKpi = (el, rows) => { el.innerHTML = tabela([{ h: 'Tipo de falha', k: 'tipo', f: v => v.replace(/_/g, ' ') }, { h: 'Ocorrências', k: 'ocorrencias', n: 1 }, { h: 'MTBF', k: 'mtbf_min', n: 1, f: v => v == null ? '—' : fmtDur(v) },
+  { h: 'MTTR', k: 'mttr_min', n: 1, f: v => fmtDur(v) }, { h: 'Detecção', k: 'deteccao_min', n: 1, f: v => fmtDur(v) }, { h: 'Deslocamento', k: 'deslocamento_min', n: 1, f: v => fmtDur(v) }, { h: 'Espera de peça', k: 'espera_peca_min', n: 1, f: v => fmtDur(v) }], rows)
+  + '<p class="insight">MTBF = tempo médio entre falhas; MTTR = tempo médio até consertar (da falha ao fim do reparo).</p>'; };
+function drawPecas(el, rows) {
+  const ps = [...new Set(rows.map(r => r.peca))], cores = { correia: '#e0a34a', lente: '#5aa9ff', compressor: '#e8731c' };
+  setOpt(el, {
+    grid: gridBase, legend: { top: 2, right: 8 }, tooltip: { trigger: 'item', formatter: p => `<b>${p.seriesName}</b><br>${fmtT(p.data[0])}<br>estoque: ${p.data[1]}` },
+    xAxis: { type: 'value', scale: true, axisLabel: { formatter: v => fmtT(v) } }, yAxis: { type: 'value', name: 'peças em estoque', minInterval: 1 },
+    series: ps.flatMap(p => [{ name: p, type: 'line', step: 'end', symbol: 'circle', symbolSize: 6, itemStyle: { color: cores[p] }, lineStyle: { color: cores[p] }, data: rows.filter(r => r.peca === p).map(r => [r.ts, r.estoque]) },
+      { name: p + ' (pedido)', type: 'scatter', symbol: 'triangle', symbolSize: 12, itemStyle: { color: '#ff5d5d' }, data: rows.filter(r => r.peca === p && r.evento === 'pedido').map(r => [r.ts, r.estoque]) }]),
+  }, true);
+}
+const tablePecas = (el, rows) => { el.innerHTML = tabela([{ h: 'Peça', k: 'peca' }, { h: 'Usadas', k: 'usadas', n: 1 }, { h: 'Pedidos feitos', k: 'pedidos', n: 1 }, { h: 'Chegadas', k: 'chegadas', n: 1 }, { h: 'Estoque mínimo', k: 'estoque_minimo', n: 1, f: v => v === 0 ? `<span class="neg">${v} (faltou)</span>` : v }], rows); };
+
+// Resíduos
+function drawResiduosTempo(el, rows) {
+  const ts = bucketLabels(rows), ds = ['racao', 'compostagem', 'aterro'];
+  setOpt(el, {
+    grid: gridBase, legend: { top: 2, right: 8 }, tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, valueFormatter: v => v + ' kg' }, xAxis: { type: 'category', data: ts.map(fmtT) }, yAxis: { type: 'value', name: 'kg por hora' },
+    series: ds.map(d => ({ name: DEST_NOME[d], type: 'bar', stack: 'r', data: ts.map(t => { const x = rows.find(r => r.t === t && r.destino === d); return x ? x.kg : 0; }), itemStyle: { color: DEST_COR[d] }, barMaxWidth: 34 })),
+  }, true);
+}
+function drawResiduosDestino(el, rows) {
+  setOpt(el, {
+    grid: { ...gridBase, right: 20 }, tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } }, xAxis: { type: 'category', data: rows.map(r => DEST_NOME[r.destino] || r.destino) }, yAxis: { type: 'value', name: 'kg' },
+    series: [{ type: 'bar', barMaxWidth: 70, data: rows.map(r => ({ value: r.kg, itemStyle: { color: DEST_COR[r.destino] } })), label: { show: true, position: 'top', color: '#d5dde8', formatter: p => `${p.value} kg · ${rows[p.dataIndex].coletas} coletas` } }],
+  }, true);
+}
+const tableResiduosOrigem = (el, rows) => { el.innerHTML = tabela([{ h: 'De onde vem', k: 'origem', f: v => ({ triagem: 'Triagem (RUIM)', qualidade: 'Sala de qualidade (reprovadas)', processamento: 'Descasque e corte', armazem: 'Armazém frio (deterioração)' }[v] || v) },
+  { h: 'Vai para', k: 'destino', f: v => DEST_NOME[v] || v }, { h: 'kg', k: 'kg', n: 1 }], rows); };
+
+// Processamento
+function drawProcEtapas(el, rows) {
+  const r = rows[0]; if (!r || !r.batatas) { el.innerHTML = '<div class="empty">Sem batatas processadas ainda.</div>'; return; }
+  const nomes = ['Entrada (calibre grande)', 'Casca', 'Aparas do corte', 'Produto descascado e cortado'];
+  const base = [0, r.entrada_kg - r.casca_kg, r.saida_kg, 0], val = [r.entrada_kg, r.casca_kg, r.apara_kg, r.saida_kg], cor = ['#5aa9ff', '#c79a5b', '#e0a34a', '#2fd36b'];
+  setOpt(el, {
+    grid: { ...gridBase, right: 24 }, tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, formatter: ps => `<b>${ps[1].name}</b><br>${val[ps[1].dataIndex]} kg` },
+    xAxis: { type: 'category', data: nomes }, yAxis: { type: 'value', name: 'kg' },
+    series: [{ type: 'bar', stack: 'w', data: base, itemStyle: { color: 'transparent' }, tooltip: { show: false } },
+      { type: 'bar', stack: 'w', barMaxWidth: 80, data: val.map((v, i) => ({ value: v, itemStyle: { color: cor[i] } })), label: { show: true, position: 'inside', color: '#fff', formatter: p => `${val[p.dataIndex]} kg` } }],
+  }, true);
+}
+function drawProcLote(el, rows) {
+  setOpt(el, {
+    grid: { ...gridBase, right: 52 }, legend: { top: 2, right: 8 }, tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } }, xAxis: { type: 'category', data: rows.map(r => r.lote_id) },
+    yAxis: [{ type: 'value', name: 'kg de entrada' }, { type: 'value', name: '% de perda', min: 0, splitLine: { show: false }, axisLabel: { formatter: '{value}%' } }],
+    series: [{ name: 'Entrada (kg)', type: 'bar', data: rows.map(r => r.entrada_kg), itemStyle: { color: '#5aa9ff' }, barMaxWidth: 30 }, { name: '% de perda (casca + aparas)', type: 'line', yAxisIndex: 1, symbolSize: 8, data: rows.map(r => r.pct_perda), itemStyle: { color: '#e0a34a' }, lineStyle: { width: 2.5 } }],
+  }, true);
+}
+function drawProcTempo(el, rows) {
+  setOpt(el, {
+    grid: gridBase, legend: { top: 2, right: 8 }, tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, valueFormatter: v => v + ' kg' }, xAxis: { type: 'category', data: rows.map(r => fmtT(r.t)) }, yAxis: { type: 'value', name: 'kg por hora' },
+    series: [{ name: 'Produto', type: 'bar', stack: 'p', data: rows.map(r => r.saida_kg), itemStyle: { color: '#2fd36b' }, barMaxWidth: 34 }, { name: 'Perda (casca + aparas)', type: 'bar', stack: 'p', data: rows.map(r => r.perda_kg), itemStyle: { color: '#c79a5b' }, barMaxWidth: 34 }],
+  }, true);
+}
+
+// Turnos e pessoas
+function drawTurnos(el, rows) {
+  setOpt(el, {
+    grid: { ...gridBase, right: 52 }, legend: { top: 2, right: 8 }, tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } }, xAxis: { type: 'category', data: rows.map(r => TURNO_NOME[r.turno] || r.turno) },
+    yAxis: [{ type: 'value', name: 'batatas / h' }, { type: 'value', name: '%', min: 0, splitLine: { show: false }, axisLabel: { formatter: '{value}%' } }],
+    series: [{ name: 'Vazão (batatas/h)', type: 'bar', data: rows.map(r => r.vazao_h), itemStyle: { color: '#5aa9ff' }, barMaxWidth: 60 },
+      { name: '% refugo', type: 'line', yAxisIndex: 1, symbolSize: 9, data: rows.map(r => r.pct_refugo), itemStyle: { color: '#ff5d5d' }, lineStyle: { width: 2.5 } },
+      { name: '% reprovadas pelos inspetores', type: 'line', yAxisIndex: 1, symbolSize: 9, data: rows.map(r => r.pct_reprovadas), itemStyle: { color: '#ffc929' }, lineStyle: { width: 2.5 } }],
+  }, true);
+}
+const tableTurnos = (el, rows) => { el.innerHTML = tabela([{ h: 'Turno', k: 'turno', f: v => `<b>${TURNO_NOME[v] || v}</b>` }, { h: 'Batatas', k: 'batatas', n: 1, f: num }, { h: 'Vazão/h', k: 'vazao_h', n: 1 }, { h: '% refugo', k: 'pct_refugo', n: 1, f: v => v + '%' },
+  { h: '% suspeitas', k: 'pct_suspeita', n: 1, f: v => v + '%' }, { h: 'Inspeções', k: 'inspecionadas', n: 1 }, { h: '% reprovadas', k: 'pct_reprovadas', n: 1, f: v => v == null ? '—' : v + '%' }], rows); };
+const tableTurnoInsp = (el, rows) => { el.innerHTML = tabela([{ h: 'Turno', k: 'turno' }, { h: 'Inspetor', k: 'inspetor_id' }, { h: 'Inspeções', k: 'inspecoes', n: 1 }, { h: '% reprovadas', k: 'pct_reprovadas', n: 1, f: v => v + '%' }], rows); };
+const tableTurnoParadas = (el, rows) => { el.innerHTML = tabela([{ h: 'Turno', k: 'turno', f: v => TURNO_NOME[v] || v }, { h: 'Paradas', k: 'paradas', n: 1 }, { h: 'Tempo parado', k: 'minutos_parados', n: 1, f: v => fmtDur(v) }], rows); };
+const tableEscala = (el, rows) => { el.innerHTML = tabela([{ h: 'Troca de turno', k: 'ts', f: fmtT }, { h: 'Turno', k: 'turno' }, { h: 'Inspetores na sala', k: 'inspetores', n: 1 }, { h: 'Operador', k: 'operador_id' }], rows); };
+
+// Pedidos e entregas
+function htmlOtif(el, rows) {
+  const r = rows[0] || {};
+  el.innerHTML = `<div class="tiles">${kv('Pedidos', r.pedidos ?? 0)}${kv('Entregues', r.entregues ?? 0)}${kv('No prazo', r.pct_no_prazo == null ? '—' : r.pct_no_prazo + '%', r.pct_no_prazo >= 90 ? 'pos' : 'warn')}`
+    + `${kv('Atraso médio', r.atraso_medio_min == null ? '—' : fmtDur(r.atraso_medio_min), r.atraso_medio_min ? 'neg' : '')}${kv('Atrasados em aberto', r.atrasados_abertos ?? 0, r.atrasados_abertos ? 'neg' : '')}</div>`;
+}
+function drawBacklog(el, rows) {
+  setOpt(el, {
+    grid: gridBase, legend: { top: 2, right: 8 }, tooltip: { trigger: 'axis' }, xAxis: { type: 'category', data: rows.map(r => fmtT(r.t)) }, yAxis: { type: 'value', name: 'pedidos', minInterval: 1 },
+    series: [{ name: 'Pedidos em aberto', type: 'line', step: 'end', symbol: 'none', data: rows.map(r => r.abertos), lineStyle: { color: '#5aa9ff', width: 2.5 }, areaStyle: { color: 'rgba(90,169,255,.12)' } },
+      { name: 'Já atrasados', type: 'line', step: 'end', symbol: 'none', data: rows.map(r => r.atrasados), lineStyle: { color: '#ff5d5d', width: 2.5 } }],
+  }, true);
+}
+function drawPedCliente(el, rows) {
+  setOpt(el, {
+    grid: { ...gridBase, right: 52 }, legend: { top: 2, right: 8 }, tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } }, xAxis: { type: 'category', data: rows.map(r => r.cliente) },
+    yAxis: [{ type: 'value', name: 'pedidos', minInterval: 1 }, { type: 'value', name: '% no prazo', min: 0, max: 100, splitLine: { show: false }, axisLabel: { formatter: '{value}%' } }],
+    series: [{ name: 'Pedidos', type: 'bar', data: rows.map(r => r.pedidos), itemStyle: { color: '#5aa9ff' }, barMaxWidth: 54 }, { name: '% entregue no prazo', type: 'line', yAxisIndex: 1, symbolSize: 9, data: rows.map(r => r.pct_no_prazo), itemStyle: { color: '#2fd36b' }, lineStyle: { width: 2.5 } }],
+  }, true);
+}
+const tablePedidos = (el, rows) => { el.innerHTML = tabela([{ h: 'Pedido', k: 'pedido_id' }, { h: 'Cliente', k: 'cliente' }, { h: 'Criado', k: 'criado_ts', f: fmtT }, { h: 'Prazo', k: 'prazo_ts', f: fmtT }, { h: 'Paletes', k: 'atendidos', n: 1, f: (v, r) => `${v}/${r.paletes}` },
+  { h: 'Situação', k: 'status', f: v => chip(v, PEDCLS[v] || 'v-ok') }, { h: 'Entregue em', k: 'fechado_ts', f: v => v ? fmtT(v) : '—' }, { h: 'Atraso', k: 'atraso_min', n: 1, f: v => v == null ? '—' : v ? `<span class="neg">${fmtDur(v)}</span>` : '<span class="pos">no prazo</span>' }], rows); };
+const tableEntregas = (el, rows) => { el.innerHTML = tabela([{ h: 'Carga', k: 'carga_id', n: 1 }, { h: 'Saída', k: 'ts', f: fmtT }, { h: 'Pedido', k: 'pedido_id', f: v => v || '<span style="color:#66758a">venda sem pedido</span>' }, { h: 'Paletes', k: 'paletes', n: 1 }], rows); };
+
 
 // ───────────────────────── páginas ─────────────────────────
 const Q = (id, pergunta, q, draw, o = {}) => ({ id, pergunta, q, draw, h: 300, ...o });
@@ -322,6 +529,57 @@ const PAGES = {
     Q('m2', 'Quantas paradas tivemos e quanto tempo ficamos parados, por tipo?', 'paradas', drawParadas),
     Q('m3', 'Ordens de manutenção (histórico)', 'paradas', tableParadas, { html: 1, h: 190 }),
   ] },
+  lab: { grupo: 'Laboratório', titulo: 'Laboratório', sub: 'Análise de cada lote que chega: por que um fornecedor rende pior?', cards: [
+    Q('l1', 'Por que um lote gera mais refugo? (açúcar do laboratório × % de refugo do lote)', 'lab_lotes', drawLabScatter, { wide: 1, h: 340 }),
+    Q('l2', 'Qual fornecedor entrega a melhor matéria-prima segundo o laboratório?', 'lab_fornecedor', tableLabForn, { html: 1, h: 150, wide: 1 }),
+    Q('l3', 'Quais lotes foram analisados e qual foi o resultado?', 'lab_lotes', tableLabLotes, { html: 1, h: 200, wide: 1 }),
+  ] },
+  frio: { grupo: 'Armazém frio', titulo: 'Armazém frio', sub: 'Temperatura, deterioração e perdas da matéria-prima.', cards: [
+    Q('f1', 'A temperatura do armazém ficou dentro do limite? Quando o compressor parou?', 'armazem_tempo', drawArmazem, { wide: 1, h: 320 }),
+    Q('f2', 'Quanto a matéria-prima sofreu? (temperatura, idade e deterioração)', 'armazem_resumo', htmlFrio, { html: 1, h: 160, wide: 1 }),
+    Q('f3', 'Quais caixas foram descartadas por deterioração?', 'armazem_perdas', tablePerdasFrio, { html: 1, h: 120, wide: 1 }),
+  ] },
+  rastreio: { grupo: 'Qualidade e logística', titulo: 'Rastreabilidade', sub: 'Do lote ao caminhão: se um lote for recolhido, para onde ele foi?', cards: [
+    Q('ra1', 'Quais lotes já saíram da fábrica, em quantos paletes e cargas? (clique num lote)', 'rastreio_lotes', tableRastroLotes, { html: 1, h: 160, wide: 1 }),
+    Q('ra2', 'Para onde foi o lote <b class="selote"></b>?', 'rastreio_lote', tableRastroLote, { html: 1, h: 120, wide: 1, params: () => ({ lote: S.lote }) }),
+    Q('ra3', 'O que cada carga levou? (lotes misturados em cada caminhão)', 'rastreio_cargas', tableRastroCargas, { html: 1, h: 150 }),
+    Q('ra4', 'Quais recalls foram simulados no simulador (tecla R)?', 'recalls_lista', tableRecalls, { html: 1, h: 120 }),
+  ] },
+  util: { grupo: 'Manutenção e Diretoria', titulo: 'Energia e água', sub: 'Consumo por setor e por kg produzido.', cards: [
+    Q('u1', 'Quanto de energia e água a fábrica consome por hora?', 'util_tempo', drawUtilTempo, { params: { b: 60 }, wide: 1 }),
+    Q('u2', 'Qual setor mais consome energia e água?', 'util_setor', drawUtilSetor, { h: 340 }),
+    Q('u3', 'Quanto gastamos de energia e água por kg processado?', 'util_eficiencia', drawUtilEfic, { params: { b: 60 }, h: 340 }),
+  ] },
+  oficina: { grupo: 'Manutenção', titulo: 'Oficina e peças', sub: 'Quanto tempo uma falha leva para ser resolvida e por quê.', cards: [
+    Q('o1', 'Onde se perde tempo numa falha? (percepção, deslocamento, espera de peça e reparo)', 'manut_kpi', drawManutKpi, { wide: 1, h: 320 }),
+    Q('o2', 'Qual o MTBF e o MTTR de cada tipo de falha?', 'manut_kpi', tableManutKpi, { html: 1, h: 130, wide: 1 }),
+    Q('o3', 'O estoque de peças aguenta o ritmo das falhas?', 'pecas_eventos', drawPecas),
+    Q('o4', 'Quantas peças usamos, pedimos e quando faltou?', 'pecas_consumo', tablePecas, { html: 1, h: 130 }),
+  ] },
+  residuos: { grupo: 'Diretoria', titulo: 'Resíduos e subprodutos', sub: 'Para onde vai o que não vira produto.', cards: [
+    Q('r1', 'Quantos kg de resíduo por hora e para onde vão? (ração, compostagem, aterro)', 'residuos_tempo', drawResiduosTempo, { params: { b: 60 }, wide: 1 }),
+    Q('r2', 'Quanto de cada destino já foi gerado e quantas coletas foram feitas?', 'residuos_destino', drawResiduosDestino),
+    Q('r3', 'De onde vem cada resíduo?', 'residuos_origem', tableResiduosOrigem, { html: 1, h: 160 }),
+  ] },
+  proc: { grupo: 'Gerente de produção', titulo: 'Processamento', sub: 'Descasque e corte do calibre grande: rendimento por etapa.', cards: [
+    Q('pr1', 'Quanto da batata entra e quanto vira produto, etapa por etapa?', 'proc_etapas', drawProcEtapas, { wide: 1, h: 320 }),
+    Q('pr2', 'O rendimento do descasque muda de lote para lote?', 'proc_lote', drawProcLote),
+    Q('pr3', 'Quantos kg de produto e de perda por hora?', 'proc_tempo', drawProcTempo, { params: { b: 60 } }),
+  ] },
+  turnos: { grupo: 'Gerente de produção', titulo: 'Turnos e pessoas', sub: 'Produção e qualidade por turno e por inspetor.', cards: [
+    Q('t1', 'Algum turno produz menos ou erra mais? (vazão, refugo e reprovação humana)', 'turno_resumo', drawTurnos, { wide: 1, h: 320 }),
+    Q('t2', 'Resumo por turno', 'turno_resumo', tableTurnos, { html: 1, h: 120 }),
+    Q('t3', 'Qual inspetor reprova mais, em cada turno?', 'turno_inspetor', tableTurnoInsp, { html: 1, h: 160 }),
+    Q('t4', 'Quando as paradas acontecem (por turno)?', 'turno_paradas', tableTurnoParadas, { html: 1, h: 100 }),
+    Q('t5', 'Como foi a escala? (trocas de turno e inspetores na sala)', 'escala_lista', tableEscala, { html: 1, h: 160 }),
+  ] },
+  pedidos: { grupo: 'Diretoria', titulo: 'Pedidos e entregas', sub: 'Entregamos no prazo? Cada caminhão abate os pedidos mais urgentes.', cards: [
+    Q('pe1', 'Qual o desempenho de entrega? (pedidos no prazo e atrasos)', 'otif_resumo', htmlOtif, { html: 1, h: 100, wide: 1 }),
+    Q('pe2', 'A fila de pedidos está crescendo? (em aberto e atrasados ao longo do tempo)', 'pedidos_backlog', drawBacklog, { wide: 1 }),
+    Q('pe3', 'Qual cliente recebe mais no prazo?', 'pedidos_cliente', drawPedCliente),
+    Q('pe4', 'Quais cargas atenderam quais pedidos?', 'entregas_lista', tableEntregas, { html: 1, h: 150 }),
+    Q('pe5', 'Lista de pedidos e situação', 'pedidos_lista', tablePedidos, { html: 1, h: 200, wide: 1 }),
+  ] },
   estoque: { titulo: 'Estoque e expedição', sub: 'Níveis de matéria-prima, expedição e estoque acabado.', cards: [
     Q('e1', 'Como estão os níveis de estoque ao longo do tempo?', 'estoque_tempo', drawEstoque, { wide: 1 }),
     Q('e2', 'Quais cargas foram expedidas?', 'expedicao_lista', tableExped, { html: 1, h: 160, wide: 1 }),
@@ -331,6 +589,8 @@ const NAV = [
   ['Visão geral', [['painel', 'Painel']]],
   ['Por público', [['producao', 'Produção', 'Gerente de produção'], ['qualidade', 'Qualidade', 'Controle de qualidade'], ['compras', 'Compras', 'Fornecedores'], ['diretoria', 'Diretoria', 'Rendimento e expedição'], ['manutencao', 'Manutenção', 'Sensores e paradas']]],
   ['Operação', [['estoque', 'Estoque e expedição']]],
+  ['Setores da fábrica', [['lab', 'Laboratório', 'Qualidade da matéria-prima'], ['frio', 'Armazém frio', 'Temperatura e perdas'], ['rastreio', 'Rastreabilidade', 'Do lote ao caminhão'], ['util', 'Energia e água', 'Utilidades por setor'],
+    ['oficina', 'Oficina e peças', 'MTTR, MTBF e estoque'], ['residuos', 'Resíduos', 'Subprodutos e descarte'], ['proc', 'Processamento', 'Descasque e corte'], ['turnos', 'Turnos e pessoas', 'Produção por turno'], ['pedidos', 'Pedidos e entregas', 'Prazos e OTIF']]],
   ['Dados', [['tabelas', 'Tabelas', 'Explorar o banco'], ['sql', 'Consulta SQL', 'Somente leitura']]],
 ];
 $('nav').innerHTML = NAV.map(([g, items]) => `<h6>${g}</h6>` + items.map(([id, t, s]) => `<a href="#${id}" data-p="${id}">${t}${s ? `<small>${s}</small>` : ''}</a>`).join('')).join('');
@@ -359,8 +619,9 @@ async function refresh() {
     const el = sec.querySelector('.chart');
     try {
     const name = c.q === 'throughput' ? 'producao_tempo' : c.q;
-    const main = await api('/api/q/' + name, c.params);
+    const main = await api('/api/q/' + name, typeof c.params === 'function' ? c.params() : c.params);
     const extra = await Promise.all((c.needs || []).map(([n, pr]) => api('/api/q/' + n, pr)));
+    document.querySelectorAll('.selote').forEach(e => { e.textContent = S.lote; });
     sec.querySelector('pre').textContent = main.sql ? main.sql.replace(/\?/g, ':run') : '';
     if (!main.rows || !main.rows.length) { { const old = echarts.getInstanceByDom(el); if (old) old.dispose(); } el.innerHTML = '<div class="empty">Sem dados ainda.<br>Abra o simulador 3D e deixe a linha rodar.</div>'; return; }
     if (c.html) { const old = echarts.getInstanceByDom(el); if (old) old.dispose(); c.draw(el, main.rows, extra); el.style.height = 'auto'; el.style.minHeight = '40px'; }
@@ -378,7 +639,13 @@ async function drawTiles() {
     + tile('Vazão (última hora)', num(k.ultima_hora || 0), 'batatas / hora de fábrica') + tile('Suspeitas', num(ev.susp || 0), `${ev.corpo || 0} corpos estranhos`, 'warn')
     + tile('Expedido', `${ex.paletes || 0} paletes`, `${ex.cargas || 0} cargas · ${ex.volumes || 0} volumes`)
     + tile('Calibração do sensor', cal, deriva ? 'deriva detectada' : 'dentro do normal', deriva ? 'warn' : '')
-    + tile('Paradas', (k.manutencao || {}).n || 0, `${fmtDur((k.manutencao || {}).min || 0)} parados`);
+    + tile('Paradas', (k.manutencao || {}).n || 0, `${fmtDur((k.manutencao || {}).min || 0)} parados`)
+    + tile('Armazém frio', k.frio && k.frio.temp_c != null ? k.frio.temp_c.toFixed(1) + ' °C' : '—', k.frio && k.frio.falha ? 'refrigeração parada' : `${(k.frio || {}).caixas_descartadas || 0} caixas descartadas`, k.frio && k.frio.temp_c > 9 ? 'neg' : '')
+    + tile('Energia e água', k.util && k.util.kwh != null ? num(k.util.kwh) + ' kWh' : '—', k.util && k.util.agua != null ? num(k.util.agua) + ' L de água' : '')
+    + tile('Pedidos no prazo', (k.pedidos || {}).entregues ? Math.round(100 * k.pedidos.no_prazo / k.pedidos.entregues) + '%' : '—', `${(k.pedidos || {}).entregues || 0} entregues · ${(k.pedidos || {}).atrasados || 0} atrasados`, (k.pedidos || {}).atrasados ? 'warn' : 'pos')
+    + tile('Resíduos', ((k.residuos || {}).kg || 0) + ' kg', 'ração, compostagem e aterro')
+    + tile('Laboratório', (k.lab || {}).n || 0, `${(k.lab || {}).reprovados || 0} lotes reprovados`, (k.lab || {}).reprovados ? 'warn' : '')
+    + tile('Rendimento do descasque', (k.proc || {}).rendimento != null ? k.proc.rendimento + '%' : '—', `${(k.proc || {}).n || 0} batatas grandes`);
 }
 async function refreshHeader() {
   const k = await api('/api/kpis'); const ev = k.eventos || {};
@@ -414,10 +681,14 @@ const EXEMPLOS = {
   'Peso médio por defeito': `SELECT tipo_defeito, COUNT(*) AS n, ROUND(AVG(peso_g), 1) AS peso_medio_g, ROUND(AVG(area_defeito_pct), 1) AS area_media\nFROM eventos GROUP BY tipo_defeito ORDER BY n DESC`,
   'Quem decidiu o quê (inspetores)': `SELECT inspetor_id, classificacao_final, COUNT(*) AS n\nFROM eventos WHERE inspetor_id IS NOT NULL GROUP BY 1, 2 ORDER BY 1, 2`,
   'Volumes por carga': `SELECT carga_id, COUNT(*) AS paletes, SUM(volumes) AS volumes FROM expedicao GROUP BY carga_id`,
+  'Açúcar × refugo por lote': `SELECT l.lote_id, l.fornecedor_id, l.acucar_pct, l.resultado,\n       ROUND(100.0 * SUM(e.classificacao = 'RUIM') / COUNT(*), 1) AS pct_ruim\nFROM lab_analises l JOIN eventos e ON e.lote_id = l.lote_id AND e.run_id = l.run_id\nGROUP BY l.lote_id ORDER BY l.acucar_pct DESC`,
+  'Para onde foi um lote (rastreio)': `SELECT palete_id, carga_id, tipo, batatas, volumes FROM rastreio WHERE lote_id = 'L-001' ORDER BY carga_id`,
+  'Energia por setor': `SELECT setor, ROUND(SUM(kwh), 1) AS kwh, ROUND(SUM(agua_l)) AS litros FROM utilidades GROUP BY setor ORDER BY kwh DESC`,
+  'Pedidos fora do prazo': `SELECT pedido_id, cliente, status, paletes, atendidos FROM pedidos WHERE status <> 'entregue' OR fechado_ts > prazo_ts`,
   'Lotes e fornecedores': `SELECT c.lote_id, d.nome, c.batatas, (SELECT COUNT(*) FROM eventos e WHERE e.lote_id = c.lote_id AND e.run_id = c.run_id) AS processadas\nFROM compras c JOIN dim_fornecedores d USING (fornecedor_id) ORDER BY c.ts`,
 };
 function pageSql(main) {
-  main.innerHTML = `<div class="sqlpage"><h1>Consulta SQL</h1><div class="sub">Banco SQLite do ERP (somente leitura). Tabelas: eventos, compras, expedicao, manutencao, sensor_saude, estoque_snap, dim_fornecedores, runs.</div>
+  main.innerHTML = `<div class="sqlpage"><h1>Consulta SQL</h1><div class="sub">Banco SQLite do ERP (somente leitura). Tabelas: eventos, compras, expedicao, manutencao, sensor_saude, estoque_snap, lab_analises, armazem_temp, armazem_perdas, rastreio, utilidades, pecas, residuos, processamento, pedidos, entregas, escala, recalls, dim_fornecedores, runs.</div>
     <div class="bar"><select id="ex">${Object.keys(EXEMPLOS).map(k => `<option>${k}</option>`).join('')}</select><button id="go" class="pri" type="button">Executar (Ctrl+Enter)</button><span id="msg" class="err"></span></div>
     <textarea id="sqlt" spellcheck="false"></textarea><div class="card" style="margin-top:12px"><div id="res"></div></div></div>`;
   const t = $('sqlt'); t.value = Object.values(EXEMPLOS)[0];

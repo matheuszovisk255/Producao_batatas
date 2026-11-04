@@ -113,6 +113,24 @@
   #d-prev td { padding: 4px 8px; border-bottom: 1px solid rgba(255,255,255,.05); white-space: nowrap; font-variant-numeric: tabular-nums; }
   #d-prev i.nul { color: #ff9d9d; font-style: normal; background: rgba(255,77,77,.15); padding: 0 5px; border-radius: 4px; }
   #d-note { margin: 10px 0 0; color: var(--muted); font-size: 12px; } #d-note code { color: var(--text); }
+  .pn { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(1180px, calc(100vw - 16px)); max-height: 82vh; overflow: auto; padding: 12px 14px 14px; z-index: 6; }
+  .pn[hidden] { display: none; }
+  .pn .x { margin-left: auto; padding: 2px 8px; }
+  .sgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 10px; }
+  .sbox { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px 10px; background: rgba(255,255,255,.02); }
+  .sbox h4 { margin: 0 0 6px; font-size: 11.5px; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); }
+  .sbox h5 { margin: 8px 0 2px; font-size: 11px; color: var(--muted); font-weight: 600; }
+  .sbox p { margin: 4px 0; font-size: 12.5px; } .sbox p.big { font-size: 26px; font-weight: 700; margin: 2px 0 6px; } .sbox p.big small { font-size: 12px; font-weight: 500; color: var(--muted); } .sbox p.big.bad { color: #ff9d9d; }
+  .sbox ul { margin: 2px 0; padding-left: 18px; font-size: 12.5px; } .sbox li small { color: var(--muted); }
+  .pn table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .pn th { text-align: left; color: var(--muted); font-weight: 600; font-size: 10.5px; text-transform: uppercase; padding: 3px 4px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  .pn td { padding: 5px 4px; border-bottom: 1px solid rgba(255,255,255,.06); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .mut { color: var(--muted); }
+  .wrow { display: grid; grid-template-columns: 90px 1fr auto; gap: 2px 8px; align-items: center; margin: 4px 0; font-size: 12.5px; } .wrow small { grid-column: 2 / 4; color: var(--muted); font-size: 11px; }
+  .kpis { display: flex; flex-wrap: wrap; gap: 6px 22px; margin: 0 0 10px; color: var(--muted); font-size: 12.5px; } .kpis b { color: var(--text); font-size: 15px; margin-left: 4px; }
+  #rastreio-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 10px; font-size: 12.5px; color: var(--muted); }
+  #rastreio-bar select { background: rgba(255,255,255,.08); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; font: inherit; }
+  #rastreio-bar button.on { background: rgba(255,77,77,.25); color: #ff9d9d; border-color: rgba(255,77,77,.4); }
   #toast { position: fixed; left: 50%; bottom: 96px; transform: translate(-50%, 12px); max-width: min(560px, calc(100vw - 32px)); padding: 10px 16px; border-radius: 10px;
     background: rgba(150,30,30,.95); color: #fff; font-size: 13px; opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s; z-index: 20; box-shadow: 0 8px 28px rgba(0,0,0,.45); }
   #toast.on { opacity: 1; transform: translate(-50%, 0); }
@@ -154,6 +172,10 @@
         <li><span class="dot" style="background:#9fd4ff"></span>EVENTOS GRAVADOS <b id="n-eventos">0</b></li>
         <li><span class="dot" style="background:#7ec8ff"></span>ERP <b id="n-erp">offline</b></li>
         <li><span class="dot" style="background:#8a6a44"></span>PALETES NO CAMINHÃO <b id="n-paletes">0/4</b></li>
+        <li><span class="dot" style="background:#7ec8ff"></span>ARMAZÉM FRIO <b id="n-frio">6.0 °C</b></li>
+        <li><span class="dot" style="background:#ffd84d"></span>ENERGIA <b id="n-kw">0 kW</b></li>
+        <li><span class="dot" style="background:#9fd4ff"></span>ÁGUA <b id="n-agua">0 L/min</b></li>
+        <li><span class="dot" style="background:#c79a5b"></span>PEDIDOS <b id="n-ped">0 abertos</b></li>
       </ul>
     </div>
     <div id="gargalos" class="stats card" hidden><small>Gargalos</small><ul id="g-list"></ul></div>
@@ -182,7 +204,7 @@
   </div>
   <div class="d-actions"><button id="d-zip" type="button" class="on">Baixar pacote (.zip)</button><button id="d-clear" type="button">Limpar histórico</button></div>
   <div class="d-scroll"><table id="d-prev"></table></div>
-  <p id="d-note">O pacote traz <code>landing/eventos</code> e <code>landing/inspecao_manual</code> particionados por data, as dimensões, <code>manifest.json</code> (semente, taxas e catálogo de problemas) e um conversor para Parquet. A deriva do sensor e a qualidade por fornecedor já acontecem na própria fábrica.</p>
+  <p id="d-note">O pacote traz <code>landing/eventos</code> e <code>landing/inspecao_manual</code> particionados por data, as dimensões, as tabelas dos setores em <code>landing/operacao</code>, <code>manifest.json</code> (semente, taxas e catálogo de problemas) e um conversor para Parquet. A deriva do sensor e a qualidade por fornecedor já acontecem na própria fábrica.</p>
 </div>
 
 <div id="forn" class="card" hidden>
@@ -193,6 +215,20 @@
     <tbody id="forn-body"></tbody>
   </table>
   <p id="forn-tip"></p>
+</div>
+
+<div id="setores" class="card pn" hidden>
+  <div class="f-head"><b>Setores</b><span class="tag">laboratório · frio · utilidades · oficina · resíduos · pessoas</span><button id="setores-x" class="x" type="button" aria-label="Fechar">✕</button></div>
+  <div id="setores-body" class="sgrid"></div>
+</div>
+<div id="rastreio" class="card pn" hidden>
+  <div class="f-head"><b>Rastreabilidade</b><span class="tag">lote → paletes → caminhões</span><button id="rastreio-x" class="x" type="button" aria-label="Fechar">✕</button></div>
+  <div id="rastreio-bar"><label>Lote <select id="rastreio-sel"></select></label><button type="button" id="rastreio-mark">Destacar paletes</button><button type="button" id="rastreio-recall">Simular recall</button></div>
+  <div id="rastreio-body"></div>
+</div>
+<div id="pedidos" class="card pn" hidden>
+  <div class="f-head"><b>Pedidos e entregas</b><span class="tag">clientes · prazos · caminhões</span><button id="pedidos-x" class="x" type="button" aria-label="Fechar">✕</button></div>
+  <div id="pedidos-body"></div>
 </div>
 
 <div id="ficha" class="card" hidden>
@@ -220,6 +256,14 @@
     <button type="button" data-view="expedicao">Expedição</button>
     <button type="button" data-view="estoque">Estoque</button>
     <button type="button" data-view="recebimento">Recebimento</button>
+    <button type="button" data-view="laboratorio">Laboratório</button>
+    <button type="button" data-view="frio">Armazém frio</button>
+    <button type="button" data-view="oficina">Oficina</button>
+    <button type="button" data-view="processamento">Processamento</button>
+    <button type="button" data-view="residuos">Resíduos</button>
+    <button type="button" id="setores-btn">Setores (S)</button>
+    <button type="button" id="rastreio-btn">Rastreio (R)</button>
+    <button type="button" id="pedidos-btn">Pedidos (P)</button>
     <button type="button" id="forn-btn">Fornecedores (T)</button>
     <button type="button" id="dados-btn">Dados (D)</button>
     <button type="button" id="erp-btn" title="Abre o ERP (precisa do servidor rodando)">ERP ↗</button>
@@ -266,6 +310,25 @@ const CLASSES = {
 };
 const sim = { speed: 1, beltSpeed: 1.4, rate: 1.5 };
 const counts = { BOA: 0, RUIM: 0, SUSPEITA: 0, CORPO: 0 };
+
+// ───── Estado dos setores novos (a lógica e o cenário ficam no bloco "Setores novos", mais abaixo)
+const NOW = { min: 9 * 60 };                                          // minutos de jogo desde o dia 0 (atualizado pelo relógio)
+let PALID = 0;                                                        // numeração dos paletes
+const LOTS = { 'L-000': { si: 0, q: 0, recebido: null, lab: null } };  // lotes recebidos: qualidade oculta (q) e análise do laboratório
+const COLD = { temp: 6, set: 6, comp: true, fail: false, door: 0, degMax: 0, idadeMax: 0, losses: 0 };
+const PARTS = {
+  correia:    { nome: 'Correia da esteira', n: 2, min: 1, lote: 3, lead: 240, pedido: null },
+  lente:      { nome: 'Lente do sensor',    n: 2, min: 1, lote: 3, lead: 240, pedido: null },
+  compressor: { nome: 'Compressor do frio', n: 2, min: 1, lote: 2, lead: 300, pedido: null },
+};
+const WASTE = { racao: { kg: 0, cap: 40, coletas: 0 }, compostagem: { kg: 0, cap: 12, coletas: 0 }, aterro: { kg: 0, cap: 5, coletas: 0 }, total: { racao: 0, compostagem: 0, aterro: 0 } };
+const UT_SET = ['esteiras', 'sensor_triagem', 'lavagem', 'qualidade', 'processamento', 'armazem_frio', 'empilhadeiras', 'iluminacao', 'embalagem', 'laboratorio'];
+const UT = { kw: {}, lpm: {}, kwh: {}, agua: {}, lastK: {}, lastA: {}, wash: 0, proc: 0 };
+for (const k of UT_SET) { UT.kw[k] = 0; UT.lpm[k] = 0; UT.kwh[k] = 0; UT.agua[k] = 0; UT.lastK[k] = 0; UT.lastA[k] = 0; }
+const CREW = { turno: null, stat: { A: { n: 0, ruim: 0, insp: 0, rej: 0 }, B: { n: 0, ruim: 0, insp: 0, rej: 0 }, C: { n: 0, ruim: 0, insp: 0, rej: 0 } } };
+const ORD = { list: [], seq: 0, next: 60, closed: 0, onTime: 0, lateMin: 0 };
+const SHIPPED = [];                                                   // cargas já expedidas (para a rastreabilidade)
+const REC = { lote: null, on: false, markers: [] };
 
 // ───────────────────────── Cena / renderer ─────────────────────────
 const canvas = document.getElementById('c');
@@ -544,7 +607,7 @@ function rack(cx, cz, len) {
 }
 
 // caminhão de entrega na porta de carga (carroceria oca: a empilhadeira entra e deixa os paletes)
-const TRUCK = { g: new THREE.Group(), dockX: 16.4, state: 'away', t: 0, count: 0, cap: 4, pallets: [] };
+const TRUCK = { g: new THREE.Group(), dockX: 16.4, state: 'away', t: 0, count: 0, cap: 4, pallets: [], manifest: [] };
 {
   const tg = TRUCK.g; tg.position.set(TRUCK.dockX + 60, 0, -1.3);
   const white = new THREE.MeshStandardMaterial({ color: col(0xe9edf2), roughness: 0.5, metalness: 0.1 });
@@ -1029,7 +1092,7 @@ let washPts, washVel;
 
 // ───────────────────────── Embalagem ─────────────────────────
 const PACK_IN = { x0: 12.99, x1: 13.65, z0: 5.95, z1: 6.85, floor: 0.5, wallTop: 1.0, items: [], consume: true, pile() { return 0; } };
-const pack = { count: 0, pending: 0, table: [], flash: 0 };
+const pack = { count: 0, pending: 0, table: [], flash: 0, mix: {}, mixQ: [] };
 const SACK_N = 6;            // batatas por saco (simplificação visual de 5 kg)
 const SACK_Y = 0.83;         // altura do tampo da mesa de sacos
 let packLampMat, packDisplay;
@@ -1160,7 +1223,7 @@ const BUN = { x0: -14.6, x1: -12.8, cap: 100, list: [] };
 const bunkerTotal = () => BUN.list.reduce((s, e) => s + e.n, 0);
 function takeFromBunker() {
   const e = BUN.list[0]; if (!e) return null;
-  const out = { si: e.si, lote: e.lote };
+  const out = { si: e.si, lote: e.lote, deg: e.deg || 0 };
   if (--e.n <= 0) BUN.list.shift();
   return out;
 }
@@ -1194,7 +1257,7 @@ const storeCount = () => store.slots.reduce((s, a) => s + a.length, 0);
 const slotXZ = i => ({ x: -11.4 + (i % 4) * 1.0, z: i < 4 ? 1.75 : 3.25 });
 const slotPos = (i, lvl) => { const p = slotXZ(i); return new THREE.Vector3(p.x, 0.2 + lvl * 0.4, p.z); };
 const pickSlotToPlace = () => { let best = -1; store.slots.forEach((a, i) => { if (a.length < 2 && (best < 0 || a.length < store.slots[best].length)) best = i; }); return best; };
-const pickSlotToTake = () => { let best = -1; store.slots.forEach((a, i) => { if (a.length > 0 && (best < 0 || a.length > store.slots[best].length)) best = i; }); return best; };
+const pickSlotToTake = () => { let best = -1, bt = 1e12; store.slots.forEach((a, i) => { if (a.length) { const tt = a[a.length - 1].t0 == null ? 0 : a[a.length - 1].t0; if (tt < bt) { bt = tt; best = i; } } }); return best; };   // primeiro a entrar, primeiro a sair
 {
   const floorM = new THREE.MeshStandardMaterial({ color: col(0xd9a21b), roughness: 0.8 });
   for (const z of [1.75, 3.25]) {                                                     // faixas amarelas de cada fileira
@@ -1224,7 +1287,7 @@ const crateMats = SUP.map(S => {
 });
 function makeCrate(si, lote) {
   const m = new THREE.Mesh(crateGeo, crateMats[si]); m.castShadow = true; m.receiveShadow = true;
-  return { mesh: m, si, lote, n: CRATE_N, xl: 0, zl: 0 };
+  return { mesh: m, si, lote, n: CRATE_N, xl: 0, zl: 0, deg: 0, t0: null };
 }
 
 // ───────────────────────── Caminhão do fornecedor (doca oeste) ─────────────────────────
@@ -1264,6 +1327,7 @@ fdw.w.g.position.set(fdw.home[0], 0, fdw.home[1]); scene.add(fdw.w.g);
 
 // ───────────────────────── Estoque inicial ─────────────────────────
 function placeCrate(c, slot) {
+  c.t0 = NOW.min;
   const lvl = store.slots[slot].length, p = slotPos(slot, lvl);
   c.mesh.position.copy(p); c.mesh.rotation.set(0, 0, 0); scene.add(c.mesh); store.slots[slot].push(c);
 }
@@ -1280,7 +1344,7 @@ const beaconMat = new THREE.MeshStandardMaterial({ color: col(0xff7a1a), emissiv
   const b = new THREE.Mesh(new THREE.SphereGeometry(0.13, 14, 10), beaconMat); b.position.set(CFG.sensorX, CFG.beltTop + 1.78, 0.8); scene.add(b);
 }
 
-const tech = { w: makeWorker(0x1f6fb5, 0xff7a1a), state: 'wait', t: 0, path: [], job: null, stand: [0, 0], aim: new THREE.Vector3(), home: [-4.6, 3.4] };
+const tech = { w: makeWorker(0x1f6fb5, 0xff7a1a), state: 'wait', t: 0, path: [], job: null, stand: [0, 0], aim: new THREE.Vector3(), home: [-4.6, 3.4], got: false, waiting: false, route: [], back: [] };
 tech.w.g.position.set(tech.home[0], 0, tech.home[1]); scene.add(tech.w.g);
 const sparkArr = new Float32Array(18 * 3);
 const sparks = new THREE.Points(new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(sparkArr, 3)),
@@ -1439,7 +1503,7 @@ for (let i = 0; i < 3; i++) {                                          // a expe
     else { m = new THREE.Mesh(unitBox, boxMats[0]); m.scale.set(0.55, 0.4, 0.45); m.castShadow = true; }
     m.position.copy(palSlot(P, k)); g.add(m);
   }
-  sl.pal = { g, n: 8, kind, seq: ++EXP.seq };
+  sl.pal = { g, n: 8, kind, seq: ++EXP.seq, lotes: { 'L-000': 40 }, id: ++PALID, formado: null };
 }
 
 // ───────────────────────── Estoque de produto acabado (porta-paletes no fundo do galpão) ─────────────────────────
@@ -1487,7 +1551,7 @@ for (let i = 0; i < 3; i++) {                                           // o est
     else { m = new THREE.Mesh(unitBox, boxMats[0]); m.scale.set(0.55, 0.4, 0.45); m.castShadow = true; }
     m.position.copy(palSlot(P, k)); g.add(m);
   }
-  sl.pal = { g, n: 8, kind, seq: ++STK.seq };
+  sl.pal = { g, n: 8, kind, seq: ++STK.seq, lotes: { 'L-000': 40 }, id: ++PALID, formado: null };
 }
 
 // ───────────────────────── Empilhadeira ─────────────────────────
@@ -1667,10 +1731,12 @@ const _v = new THREE.Vector3(), _up = new THREE.Vector3(0, 1, 0);
 // a batata sai da tremonha (que recebeu a caixa de um fornecedor) e sobe pela esteira alimentadora
 function spawn() {
   const lot = takeFromBunker(); if (!lot) return false;
-  const S = SUP[lot.si], P = S.perfil, r = Math.random();
+  const S = SUP[lot.si], P0 = S.perfil, r = Math.random();
+  const lq = LOTS[lot.lote] ? LOTS[lot.lote].q : 0, boost = clamp(0.07 * lq + 0.35 * (lot.deg || 0), -0.07, 0.4);   // lote ruim e caixa deteriorada geram mais refugo
+  const P = { BOA: Math.max(0.2, P0.BOA - boost), RUIM: P0.RUIM + boost, SUSPEITA: P0.SUSPEITA };
   let cls, defect = 'nenhum', kind = 'normal', key;
   if (r < P.BOA) { cls = 'BOA'; key = 'BOA'; }
-  else if (r < P.BOA + P.RUIM) { cls = 'RUIM'; defect = pick(RUIM_DEFECTS); key = 'RUIM:' + defect; }
+  else if (r < P.BOA + P.RUIM) { cls = 'RUIM'; defect = Math.random() < 0.3 + 0.6 * (lot.deg || 0) ? 'podre' : pick(RUIM_DEFECTS); key = 'RUIM:' + defect; }
   else if (r < P.BOA + P.RUIM + P.SUSPEITA) { cls = 'SUSPEITA'; defect = pick(SUSP_DEFECTS); key = 'SUSPEITA:' + defect; }
   else { kind = pick(['pedra', 'torrao']); cls = 'RUIM'; defect = kind; key = kind; }   // corpo estranho misturado no lote
   const geo = pick(GEOS[key]);
@@ -1731,6 +1797,7 @@ function scan(p) {
     else if (p.cls === 'SUSPEITA' && Math.random() < e * 0.5) { p.cls = 'BOA'; p.misread = true; p.conf = rand(0.72, 0.9); }
   }
   if (p.kind !== 'normal') counts.CORPO++; else counts[p.cls]++;
+  { const st = CREW.stat[shiftOf(clock.min)]; st.n++; if (p.kind !== 'normal' || p.cls === 'RUIM') st.ruim++; }
   SUP[p.si].stat.leitura[p.kind !== 'normal' ? 'CORPO' : p.cls]++;
   updateHud();
   p.read = p.kind !== 'normal' ? 'CORPO' : p.cls; p.tScan = clockStr();
@@ -1774,12 +1841,14 @@ function settle(p) {
   if (b.consume) {                                             // entrou na embalagem
     scene.remove(p.mesh);
     { SUP[p.si].stat.aprov++; }
-    if (++pack.count >= SACK_N) { pack.count -= SACK_N; pack.pending++; }
+    pack.mix[p.lote] = (pack.mix[p.lote] || 0) + 1;
+    if (++pack.count >= SACK_N) { pack.count -= SACK_N; pack.pending++; pack.mixQ.push(pack.mix); pack.mix = {}; }
     return;
   }
   p.mesh.position.y = p.restY;
   p.mesh.rotation.set(rand(-0.5, 0.5), rand(0, Math.PI * 2), rand(-0.5, 0.5));
   { const st = SUP[p.si].stat; if (b === CARTON_IN) st.aprov++; else st.desc++; }
+  if (b === RUIM_BIN || b === REJ_W) wasteFromPotato(p, b === REJ_W ? 'qualidade' : 'triagem');
   b.items.push(p);
   if (b.items.length > CFG.binCap) { const old = b.items.shift(); scene.remove(old.mesh); }
   if (b.onSettle) b.onSettle();
@@ -1827,11 +1896,12 @@ function stepPotato(p, dt, v, vm) {
       }
       if (pos.x >= L.x1) p.lane = LANES.b;
     } else if (L === LANES.b) {
+      if (!p.proc && pos.z >= PROCM.zIn) procPotato(p);
       if (pos.z >= L.z1) p.lane = LANES.c;
     } else if (L === LANES.q) {
       if (pos.z >= L.z1) p.lane = LANES.c;
     } else if (L === LANES.c) {
-      if (!p.washed && pos.x >= WASH.cx) { p.washed = true; m.material = potatoClean; }       // sai limpa da lavagem
+      if (!p.washed && pos.x >= WASH.cx) { p.washed = true; m.material = p.peeled ? potatoPeeled : potatoClean; UT.wash = 3; }       // sai limpa da lavagem
       if (!p.sized && pos.x >= STATIONS[2].x) {                                                // calibre: grandes vão para a caixa de papelão
         p.sized = true;
         if (p.kind === 'normal' && p.s > LARGE_S && cartonQueue.length < 3) { eject(p, STATIONS[2]); return; }
@@ -1890,6 +1960,7 @@ function stepInspector(I, dt) {
   switch (I.state) {
     case 'idle': {
       relaxArms(w, kk); nod(0);
+      if (I.off) break;
       I.cool -= dt;
       if (I.cool > 0) break;
       let best = null;                                          // batata mais à frente da fila
@@ -1927,8 +1998,8 @@ function stepInspector(I, dt) {
       I.p.mesh.rotation.y += 2.4 * dt; I.p.mesh.rotation.x += 1.2 * dt;
       aimBoth(pos, kk); nod(0.35 + 0.12 * Math.sin(I.t * 3));
       if (I.t >= I.dur) {
-        const ok = Math.random() < (I.p.truth === 'BOA' ? 0.95 : 0.6);   // o humano acerta mais que o sensor
-        I.ok = ok; I.p.cls = ok ? 'BOA' : 'RUIM';
+        const ok = Math.random() < (I.p.truth === 'BOA' ? 0.95 : 0.6) - SHIFT_FAT[shiftOf(clock.min)];   // o humano acerta mais que o sensor (e erra mais de madrugada)
+        I.ok = ok; { const st = CREW.stat[shiftOf(clock.min)]; st.insp++; if (!ok) st.rej++; } I.p.cls = ok ? 'BOA' : 'RUIM';
         I.p.inspetor = INSP_NAMES[inspectors.indexOf(I)]; I.p.insp = ok ? 'aprovada' : 'reprovada';
         logLabel(I.p, inspectors.indexOf(I));
         dropLabel(I.p); addLabel(I.p);
@@ -2038,7 +2109,7 @@ function fkTakeFromProduction(F, P) {
   const pg = P.g;
   F.f.g.updateMatrixWorld(true); pg.updateMatrixWorld(true);
   F.f.fork.attach(pg); pg.position.set(0, -0.05, FK_FORK_Z);
-  F.carry = { g: pg, n: P.items.length, kind: P.kind };
+  F.carry = { g: pg, n: P.items.length, kind: P.kind, lotes: sumMix(P.items), id: ++PALID, formado: gameTimeMs() };
   P.g = null; P.items = []; P.state = 'none'; P.timer = 2.5;
 }
 function fkTakeFromSlot(F, sl) {                                 // vale para vaga da expedição e do estoque
@@ -2051,7 +2122,7 @@ function fkPlaceInSlot(F, sl, y) {
   const c = F.carry;
   F.f.g.updateMatrixWorld(true); c.g.updateMatrixWorld(true);
   scene.attach(c.g); c.g.position.set(sl.x, y, sl.z); c.g.rotation.set(0, 0, 0);
-  sl.pal = { g: c.g, n: c.n, kind: c.kind, seq: ++EXP.seq };
+  sl.pal = { g: c.g, n: c.n, kind: c.kind, seq: ++EXP.seq, lotes: c.lotes, id: c.id, formado: c.formado };
   F.carry = null; updateHud();
 }
 const truckSlotX = () => 1.3 + TRUCK.count * 1.25;
@@ -2061,6 +2132,8 @@ function fkDropInTruck(F) {
   TRUCK.g.attach(c.g); c.g.position.set(sx, 0.85, 0); c.g.rotation.set(0, -Math.PI / 2, 0);
   TRUCK.pallets.push(c.g); TRUCK.count++;
   erpExpedicao({ carga_id: TRUCK.carga || 0, tipo: c.kind, volumes: c.n });
+  TRUCK.manifest.push({ id: c.id, tipo: c.kind, volumes: c.n, lotes: c.lotes || {}, formado: c.formado, carregado: gameTimeMs() });
+  for (const [lote, n] of Object.entries(c.lotes || {})) erpPush('rastreio', { seq: ++ERP.seq.rastreio, palete_id: c.id, carga_id: TRUCK.carga || 0, lote_id: lote, tipo: c.kind, batatas: n, volumes: c.n, formado_ts: c.formado, carregado_ts: gameTimeMs() });
   F.carry = null; updateHud();
 }
 
@@ -2171,11 +2244,12 @@ function stepPallets(dt) {
 // cartão fechado voa da estação do calibre para o palete de caixas
 function closeCarton() {
   const b = CARTON_IN;
+  const mix = {}; for (const it of b.items) mix[it.lote] = (mix[it.lote] || 0) + 1;
   for (const it of b.items) scene.remove(it.mesh);
   b.items.length = 0;
   const m = new THREE.Mesh(unitBox, boxMats[0]);
   m.scale.set(0.55, 0.4, 0.45); m.position.set(b.cx, b.floor + 0.2, b.cz); m.castShadow = true;
-  scene.add(m); cartonQueue.push(m);
+  m.userData.lotes = mix; scene.add(m); cartonQueue.push(m);
 }
 CARTON_IN.onSettle = () => { if (CARTON_IN.items.length >= CARTON_CAP) closeCarton(); };
 function stepCartons(dt) {
@@ -2204,7 +2278,7 @@ function stepCartons(dt) {
 function stepTruck(dt) {
   const T = TRUCK; T.t += dt;
   if (T.state === 'docked') { if (T.count >= T.cap && fkIdle()) { T.state = 'full'; T.t = 0; } }
-  else if (T.state === 'full') { if (T.t > 1.0) { T.state = 'leaving'; T.t = 0; } }
+  else if (T.state === 'full') { if (T.t > 1.0) { T.state = 'leaving'; T.t = 0; closeCarga(); } }
   else if (T.state === 'leaving') {
     const k = Math.min(1, T.t / 6);
     T.g.position.x = T.dockX + 60 * easeIO(k);
@@ -2222,10 +2296,16 @@ function setAlert(msg) {
   if (fault.msg === msg) return;
   fault.msg = msg; alertEl.textContent = msg; alertEl.hidden = !msg;
 }
+const lastInc = () => DATA.incidentes[DATA.incidentes.length - 1];
 function callTech() {
   fault.called = true;
-  tech.job = fault.active;
+  tech.job = fault.active; tech.got = false; tech.waiting = false; tech.route = []; tech.back = [];
+  { const inc = lastInc(); if (inc) inc.chamado = gameTimeMs(); }
   if (tech.job === 'esteira') { tech.stand = [fault.jamX, 1.75]; tech.aim.set(fault.jamX, CFG.beltTop + 0.1, 0.5); }
+  else if (tech.job === 'frio') {                                          // condensador no canto noroeste: o técnico contorna o armazém pelo oeste
+    tech.stand = [-14.2, -3.6]; tech.aim.set(-15.3, 1.0, -4.4);
+    tech.route = [[-8.0, 3.9], [-13.0, 3.9], [-15.2, 2.2], [-15.2, -2.0]]; tech.back = [[-15.2, -2.0], [-15.2, 2.2], [-13.0, 3.9], [-8.0, 3.9]];
+  }
   else { tech.stand = [CFG.sensorX, 1.9]; tech.aim.set(CFG.sensorX, 2.3, 0.9); }
   tech.state = 'go';
 }
@@ -2235,45 +2315,64 @@ function stepFault(dt) {
   if (!F.active) {
     F.timer -= dt;
     if (F.timer <= 0) {
-      F.active = F.next; F.next = F.active === 'esteira' ? 'sensor' : 'esteira'; F.called = false;
-      DATA.incidentes.push({ tipo: F.active, inicio: gameTimeMs(), fim: null });
+      F.active = F.next; F.next = { esteira: 'sensor', sensor: 'frio', frio: 'esteira' }[F.active]; F.called = false;
+      DATA.incidentes.push({ tipo: F.active, inicio: gameTimeMs(), fim: null, chamado: null, chegada: null, peca: null, espera: 0 });
       if (F.active === 'esteira') { F.jamX = rand(-5.5, -0.5); callTech(); }
+      else if (F.active === 'frio') COLD.fail = true;                      // o compressor para; ninguém percebe até a temperatura subir
     }
   } else if (F.active === 'sensor') {
     F.cal = Math.max(0.3, F.cal - 0.012 * dt);                  // deriva gradual da calibração
     if (!F.called && F.cal < 0.75) callTech();
+  } else if (F.active === 'frio') {
+    if (!F.called && COLD.temp > 9) callTech();
   }
   let msg = '';
-  if (F.active === 'esteira') msg = tech.state === 'fix' ? '🔧 Técnico consertando a esteira…' : '⚠ Esteira principal travada — técnico a caminho';
-  else if (F.active === 'sensor' && F.cal < 0.75) msg = tech.state === 'fix' ? '🔧 Técnico recalibrando o sensor…' : `⚠ Sensor descalibrado (${Math.round(F.cal * 100)}%) — técnico a caminho`;
+  if (F.active === 'esteira') msg = tech.state === 'fix' ? (tech.waiting ? '⏳ Sem correia em estoque — aguardando reposição' : '🔧 Técnico consertando a esteira…') : '⚠ Esteira principal travada — técnico a caminho';
+  else if (F.active === 'sensor' && F.cal < 0.75) msg = tech.state === 'fix' ? (tech.waiting ? '⏳ Sem lente em estoque — aguardando reposição' : '🔧 Técnico recalibrando o sensor…') : `⚠ Sensor descalibrado (${Math.round(F.cal * 100)}%) — técnico a caminho`;
+  else if (F.active === 'frio' && F.called) msg = tech.state === 'fix' ? (tech.waiting ? '⏳ Sem compressor em estoque — aguardando reposição' : '🔧 Técnico trocando o compressor…') : `❄ Refrigeração do armazém parada (${fmt1(COLD.temp)} °C) — técnico a caminho`;
   setAlert(msg);
   if (Math.abs(F.cal - screen.calShown) > 0.01) screen.dirty = true;
 }
 function repair() {
   const T = tech;
   if (T.job === 'sensor') fault.cal = 1;
-  { const inc = DATA.incidentes[DATA.incidentes.length - 1]; if (inc && !inc.fim) inc.fim = gameTimeMs(); if (inc) erpManut(inc, T.job); }
+  if (T.job === 'frio') COLD.fail = false;
+  { const inc = lastInc(); if (inc && !inc.fim) inc.fim = gameTimeMs(); if (inc) erpManut(inc, T.job); }
   fault.active = null; fault.called = false; fault.timer = rand(90, 150);
-  T.state = 'back'; screen.dirty = true;
+  T.state = 'back'; T.route = []; screen.dirty = true;
 }
 function stepTech(dt) {
   const T = tech, w = T.w, kk = Math.min(1, 8 * dt);
   w.g.updateMatrixWorld(true); T.t += dt;
   w.torso.rotation.x += ((T.state === 'fix' ? 0.75 : 0) - w.torso.rotation.x) * Math.min(1, 6 * dt);
-  sparks.visible = T.state === 'fix';
+  sparks.visible = T.state === 'fix' && T.got;
   switch (T.state) {
     case 'wait': relaxArms(w, kk); break;
-    case 'go': if (walkTo(w, T.stand[0], T.stand[1], dt, 1.9)) { T.state = 'fix'; T.t = 0; } break;
+    case 'go': {
+      const tgt = T.route.length ? T.route[0] : T.stand;
+      if (walkTo(w, tgt[0], tgt[1], dt, 1.9)) { if (T.route.length) T.route.shift(); else { T.state = 'fix'; T.t = 0; const inc = lastInc(); if (inc) inc.chegada = gameTimeMs(); } }
+      break;
+    }
     case 'fix':
       faceTo(w, T.aim.x, T.aim.z, kk);
       for (const a of w.arms) aimArm(a, T.aim, kk);
+      if (!T.got) {                                              // pega a peça na oficina; se acabou, espera a reposição
+        const need = PART_OF[T.job], P = PARTS[need];
+        if (P.n > 0) { P.n--; T.got = true; T.t = 0; T.waiting = false; partLog(need, 'consumo'); const inc = lastInc(); if (inc) inc.peca = need; }
+        else { T.waiting = true; const inc = lastInc(); if (inc) inc.espera = (inc.espera || 0) + dt; break; }
+      }
       for (let i = 0; i < 18; i++) {                            // faíscas
         sparkArr[i * 3] = T.aim.x + rand(-0.12, 0.12); sparkArr[i * 3 + 1] = T.aim.y + rand(-0.05, 0.2); sparkArr[i * 3 + 2] = T.aim.z + rand(-0.12, 0.12);
       }
       sparks.geometry.attributes.position.needsUpdate = true;
-      if (T.t > (T.job === 'esteira' ? 5 : 6)) repair();
+      if (T.t > (T.job === 'esteira' ? 5 : T.job === 'frio' ? 7 : 6)) repair();
       break;
-    case 'back': relaxArms(w, kk); if (walkTo(w, T.home[0], T.home[1], dt, 1.9)) T.state = 'wait'; break;
+    case 'back': {
+      relaxArms(w, kk);
+      const tgt = T.back.length ? T.back[0] : T.home;
+      if (walkTo(w, tgt[0], tgt[1], dt, 1.9)) { if (T.back.length) T.back.shift(); else T.state = 'wait'; }
+      break;
+    }
   }
 }
 
@@ -2282,7 +2381,7 @@ function stepPacker(dt) {
   packLampMat.emissiveIntensity = 0.2 + 1.6 * pack.flash;
   if (pack.pending > 0 && pack.table.length < 4) {
     pack.pending--;
-    const s = makeSack(); scene.add(s); pack.table.push(s); layoutTable();
+    const s = makeSack(); s.userData.lotes = pack.mixQ.shift() || {}; scene.add(s); pack.table.push(s); layoutTable();
     pack.flash = 1;
   }
 }
@@ -2310,6 +2409,7 @@ const stockCrates = () => storeCount() + bunkerTotal() / CRATE_N + ((RT.state ==
 function startDelivery() {
   const si = nextSupplier(); if (si < 0) return;
   RT.si = si; RT.lote = 'L-' + String(++RT.lotSeq).padStart(3, '0');
+  LOTS[RT.lote] = { si, q: clamp(gauss() * 0.55, -1, 1), recebido: null, lab: null };
   rtCab.color.copy(col(SUP[si].cor)); rtLogos.forEach(l => { l.material.map = supLogo[si]; });
   RT.crates = [];
   for (let i = 0; i < DELIVERY_CRATES; i++) {
@@ -2331,6 +2431,7 @@ function stepSupplierTruck(dt) {
       const S = SUP[T.si];
       S.stat.entregas++;
       erpCompra({ lote_id: T.lote, fornecedor_id: S.id, caixas: DELIVERY_CRATES, batatas: DELIVERY_CRATES * CRATE_N });
+      LOTS[T.lote].recebido = gameTimeMs(); LAB.queue.push(T.lote);
     }
   } else if (T.state === 'docked') {
     if (T.crates.length === 0 && unl.state === 'wait' && T.t > 1) { T.state = 'leaving'; T.t = 0; }
@@ -2381,7 +2482,7 @@ function stepUnloader(dt) {
       U.crate.mesh.position.lerp(tgt, Math.min(1, 9 * dt)); aimBoth(tgt, kk);
       if (U.t >= 0.5) {
         U.crate.mesh.position.copy(tgt); U.crate.mesh.rotation.set(0, 0, 0);
-        store.slots[U.slot].push(U.crate); U.crate = null; updateHud();
+        U.crate.t0 = NOW.min; noteDoor(); store.slots[U.slot].push(U.crate); U.crate = null; updateHud();
         if (RT.state === 'docked' && RT.crates.length > 0 && pickSlotToPlace() >= 0) { U.path = [[-12.6, 2.5], ...unloaderTarget(U, RT.crates[0])]; U.state = 'toTruck'; }
         else { U.path = [[-12.6, 2.5], [-15.4, 4.8], U.home.slice()]; U.state = 'back'; }
       }
@@ -2413,7 +2514,7 @@ function stepFeeder(dt) {
       faceTo(w, sp.x, sp.z, kk);
       if (!arr.length) { F.state = 'back'; F.path = [[-12.6, 2.5], F.home.slice()]; break; }
       aimBoth(arr[arr.length - 1].mesh.position, kk);
-      if (F.t > 0.5) { F.crate = arr.pop(); F.path = [[-12.6, 2.5], [-13.7, 1.6]]; F.state = 'carry'; updateHud(); }
+      if (F.t > 0.5) { F.crate = arr.pop(); noteDoor(); F.path = [[-12.6, 2.5], [-13.7, 1.6]]; F.state = 'carry'; updateHud(); }
       break;
     }
     case 'carry':
@@ -2423,7 +2524,7 @@ function stepFeeder(dt) {
     case 'dump':
       faceTo(w, -13.7, 0, kk); carry();
       F.crate.mesh.rotation.x = -Math.min(1, F.t / 0.7) * 1.1;                                            // inclina a caixa sobre a tremonha
-      if (!F.dumped && F.t > 0.7) { F.dumped = true; BUN.list.push({ si: F.crate.si, lote: F.crate.lote, n: F.crate.n }); updateHud(); }
+      if (!F.dumped && F.t > 0.7) { F.dumped = true; if (F.crate.deg > 0.85) coldLoss(F.crate); else BUN.list.push({ si: F.crate.si, lote: F.crate.lote, n: F.crate.n, deg: F.crate.deg }); updateHud(); }
       if (F.t > 1.3) { scene.remove(F.crate.mesh); F.crate = null; F.state = 'back'; F.path = [[-12.9, 2.2], F.home.slice()]; }
       break;
     case 'back':
@@ -2514,7 +2615,7 @@ function update(dt) {
   for (const J of janitors) stepJanitor(J, dt);
   stepLoader(dt); for (const F of FKS) stepForklift(F, dt); stepPallets(dt); stepCartons(dt); stepTruck(dt);
   stepPacker(dt); stepWash(dt);
-  stepFault(dt); stepTech(dt); stepReceiving(dt); stepERP(dt);
+  stepFault(dt); stepTech(dt); stepReceiving(dt); stepERP(dt); stepSetores(dt);
   screen.acc += dt;
   if (screen.dirty && screen.acc > 0.1) { screen.acc = 0; drawScreen(); }
 }
@@ -2584,6 +2685,7 @@ const clock = { min: 9 * 60, day: 0 };                          // 1 s real a 1x
 function stepClock(dt) {
   clock.min += dt;
   while (clock.min >= 1440) { clock.min -= 1440; clock.day++; }
+  NOW.min = clock.day * 1440 + clock.min;
   const h = clock.min / 60, hh = Math.floor(h), mm = Math.floor(clock.min % 60);
   $('clk').textContent = `${DAYS[(1 + clock.day) % 7]} ${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
   $('clk-day').textContent = `Dia ${clock.day + 1}`;
@@ -2612,6 +2714,11 @@ const PRESETS = {
   recebimento: { tx: -12.0, ty: 1.2, tz: 2.4, r: 9, theta: 1.1, phi: 0.95 },
   estoque: { tx: 8.3, ty: 1.4, tz: -7.0, r: 10, theta: 0.3, phi: 0.95 },
   expedicao: { tx: 14.0, ty: 0.9, tz: -1.5, r: 11, theta: -1.1, phi: 0.95 },
+  laboratorio: { tx: -13.2, ty: 1.3, tz: 8.2, r: 8, theta: 1.45, phi: 1.0 },
+  frio: { tx: -11.0, ty: 1.6, tz: 0.5, r: 15, theta: 0.7, phi: 1.0 },
+  oficina: { tx: -6.6, ty: 1.2, tz: 4.2, r: 6.5, theta: 2.9, phi: 1.1 },
+  processamento: { tx: 8.9, ty: 1.6, tz: 2.2, r: 10, theta: -0.9, phi: 0.95 },
+  residuos: { tx: -3.3, ty: 1.0, tz: -8.8, r: 8, theta: 0.2, phi: 1.05 },
 };
 let goal = null;
 function applyView() {
@@ -2875,6 +2982,11 @@ function bottlenecks() {
   else if (stock <= 3) out.push({ lv: 1, text: `Estoque baixo (${Math.round(stock * 10) / 10} caixas)` });
   if (!activeSup().length) out.push({ lv: 2, text: 'Nenhum fornecedor ativo' });
   if (live.length >= CFG.maxLive * 0.85) out.push({ lv: 1, text: 'Linha lotada de batatas' });
+  if (COLD.temp > 9) out.push({ lv: 2, text: `Armazém frio a ${fmt1(COLD.temp)} °C: refrigeração com problema` });
+  const semPeca = Object.keys(PARTS).filter(k => PARTS[k].nome && PARTS[k].n === 0);
+  if (semPeca.length) out.push({ lv: 2, text: `Oficina sem peça: ${semPeca.map(k => PARTS[k].nome.toLowerCase()).join(', ')}` });
+  const atras = ORD.list.filter(o => o.status === 'atrasado').length;
+  if (atras) out.push({ lv: 1, text: `${atras} pedido(s) atrasado(s)` });
   return out;
 }
 function stepBottlenecks(dt) {
@@ -2905,6 +3017,7 @@ function stepInteract(dt) {
   stepBottlenecks(dt);
   stepForn(dt);
   stepDados(dt);
+  stepPanels(dt);
 }
 
 // ───────────────────────── Painel de fornecedores: estatísticas e veredito ─────────────────────────
@@ -2970,7 +3083,12 @@ window.addEventListener('keydown', e => { if (e.code === 'KeyT' && e.target.tagN
 function stepForn(dt) { if (fornEl.hidden) return; fornAcc += dt; if (fornAcc > 0.5) { fornAcc = 0; renderForn(); } }
 
 // ───────────────────────── Dados: um evento por batata, exportável para o pipeline medalhão ─────────────────────────
-const DATA = { eventos: [], rotulos: [], incidentes: [], cap: 400000 };
+const DATA = { eventos: [], rotulos: [], incidentes: [], cap: 400000, op: {} };
+// tabelas operacionais dos setores novos: guardadas também aqui para entrarem no pacote exportável (nome da tabela = nome no ERP)
+const OP_TABELAS = { lab: 'lab_analises', armazem: 'armazem_temp', perdas: 'armazem_perdas', rastreio: 'rastreio', utilidades: 'utilidades', pecas: 'pecas', residuos: 'residuos',
+  processamento: 'processamento', pedidos: 'pedidos', entregas: 'entregas', escala: 'escala', recalls: 'recalls' };
+for (const k in OP_TABELAS) DATA.op[k] = [];
+const opClear = () => { for (const k in DATA.op) DATA.op[k].length = 0; };
 const BASE_MS = Date.UTC(2026, 0, 5);                                  // a linha "nasce" numa segunda-feira
 const OPERADORES = { A: 'OP-01', B: 'OP-02', C: 'OP-03' };
 const INSPETORES = ['INS-01', 'INS-02', 'INS-03'];
@@ -3078,6 +3196,14 @@ function buildPackage(o) {
     const lines = rByDay[d].map(r => csvLine(RT_COLS, { ...r, rotulo_timestamp: iso(r.rotulo_timestamp) }));
     files.push({ name: `landing/inspecao_manual/data=${d}/inspecao_manual.csv`, text: RT_COLS.join(',') + '\n' + lines.join('\n') + '\n' });
   }
+  const opCont = {};
+  for (const k in OP_TABELAS) {
+    let lin = DATA.op[k]; if (!lin.length) continue;
+    if (k === 'pedidos') { const m = new Map(); for (const r of lin) m.set(r.pedido_id, r); lin = [...m.values()]; }
+    const cols = Object.keys(lin[0]), isT = c => c === 'ts' || c.endsWith('_ts');
+    opCont[OP_TABELAS[k]] = lin.length;
+    files.push({ name: `landing/operacao/${OP_TABELAS[k]}.csv`, text: cols.join(',') + '\n' + lin.map(r => csvLine(cols, Object.fromEntries(cols.map(c => [c, isT(c) && r[c] ? iso(r[c]) : r[c]])))).join('\n') + '\n' });
+  }
   files.push({ name: 'landing/dimensoes/dim_fornecedores.csv',
     text: 'fornecedor_id,nome\n' + SUP.map(S => `${S.id},${S.nome}`).join('\n') + '\n' });
   files.push({ name: 'landing/dimensoes/dim_turnos.csv', text: 'turno,hora_inicio,hora_fim\nA,06:00,14:00\nB,14:00,22:00\nC,22:00,06:00\n' });
@@ -3091,11 +3217,11 @@ function buildPackage(o) {
     gerado_em: new Date().toISOString(), origem: 'Simulação 3D · Potato Line', semente: o.seed,
     parametros_injecao: o.inject ? { duplicados_pct: o.dup, nulos_pct: o.nulos, fora_de_faixa_pct: o.fora, atrasados_pct: o.atraso } : null,
     periodo_simulado: { inicio: t0 && iso(t0), fim: t1 && iso(t1) },
-    contagens: { eventos_limpos: DATA.eventos.length, eventos_no_arquivo: rows.length, rotulos_inspecao: rot.length },
+    contagens: { eventos_limpos: DATA.eventos.length, eventos_no_arquivo: rows.length, rotulos_inspecao: rot.length, tabelas_operacionais: opCont },
     problemas_injetados: o.inject ? log : {},
     problemas_reais_da_fabrica: {
       deriva_do_sensor: 'cor_matiz sobe até +18 graus quando a calibração cai; a classificação também erra (BOA lida como SUSPEITA e vice-versa)',
-      incidentes: DATA.incidentes.map(i => ({ tipo: i.tipo === 'sensor' ? 'sensor_descalibrado' : 'esteira_travada', inicio: iso(i.inicio), fim: i.fim ? iso(i.fim) : null })),
+      incidentes: DATA.incidentes.map(i => ({ tipo: TIPO_FALHA[i.tipo], inicio: iso(i.inicio), fim: i.fim ? iso(i.fim) : null })),
       qualidade_por_fornecedor: stats.map(s => ({ fornecedor_id: s.S.id, nome: s.S.nome, batatas_liberadas: s.S.stat.liberadas,
         pct_boa_lida: +(s.L.BOA / Math.max(1, s.scanned)).toFixed(3), pct_ruim_lida: +(s.L.RUIM / Math.max(1, s.scanned)).toFixed(3) })),
     },
@@ -3129,6 +3255,7 @@ Gerado pela simulação 3D. Uma linha em \`eventos\` = uma batata lida pelo sens
 - \`landing/eventos/data=AAAA-MM-DD/eventos.csv\`: eventos do sensor, particionados por data.
 - \`landing/inspecao_manual/data=AAAA-MM-DD/inspecao_manual.csv\`: rótulo final dado pelos inspetores às batatas SUSPEITAS, horas depois (dado tardio).
 - \`landing/dimensoes/\`: dim_fornecedores, dim_turnos e dim_operadores.
+- \`landing/operacao/*.csv\`: tabelas dos setores (laboratório, armazém frio, rastreio, utilidades, peças, resíduos, processamento, pedidos, entregas, escala, recalls). São fatos limpos, sem problemas injetados.
 - \`manifest.json\`: semente, taxas de injeção, contagens e catálogo de problemas.
 - \`converter_para_parquet.py\`: converte os CSV em Parquet (\`pip install pandas pyarrow\`).
 
@@ -3200,7 +3327,7 @@ const toggleDados = () => { dadosEl.hidden = !dadosEl.hidden; if (!dadosEl.hidde
 $('dados-btn').addEventListener('click', toggleDados);
 $('dados-x').addEventListener('click', () => { dadosEl.hidden = true; });
 $('d-zip').addEventListener('click', baixarPacote);
-$('d-clear').addEventListener('click', () => { DATA.eventos.length = 0; DATA.rotulos.length = 0; DATA.incidentes.length = 0; updateHud(); renderDados(); });
+$('d-clear').addEventListener('click', () => { DATA.eventos.length = 0; DATA.rotulos.length = 0; DATA.incidentes.length = 0; opClear(); updateHud(); renderDados(); });
 dadosEl.addEventListener('input', renderDados);
 window.addEventListener('keydown', e => { if (e.code === 'KeyD' && e.target.tagName !== 'INPUT' && !fp.on) toggleDados(); });
 let dadosAcc = 0;
@@ -3212,17 +3339,18 @@ function stepDados(dt) { if (dadosEl.hidden) return; dadosAcc += dt; if (dadosAc
 const ERP = {
   on: false, run: 'r' + Date.now().toString(36), iniciado: new Date().toISOString(), busy: false, status: 'offline', sentDim: false, enviados: 0,
   url: location.protocol.startsWith('http') ? '/api/ingest' : 'http://localhost:3000/api/ingest',
-  seq: { expedicao: 0, sensor: 0, estoque: 0 }, os: 0, acc: 0,
-  q: { eventos: [], rotulos: [], compras: [], expedicao: [], manutencao: [], sensor: [], estoque: [] },
+  seq: { expedicao: 0, sensor: 0, estoque: 0, armazem: 0, util: 0, pecas: 0, residuos: 0, proc: 0, entregas: 0, escala: 0, rastreio: 0, perdas: 0, recalls: 0 }, os: 0, acc: 0,
+  q: { eventos: [], rotulos: [], compras: [], expedicao: [], manutencao: [], sensor: [], estoque: [], lab: [], armazem: [], perdas: [], rastreio: [], utilidades: [], pecas: [], residuos: [], processamento: [], pedidos: [], entregas: [], escala: [], recalls: [] },
 };
 const erpFull = () => Object.values(ERP.q).reduce((s, a) => s + a.length, 0);
-const erpPush = (k, row) => { if (!ERP.on) return; if (ERP.q[k].length < 30000) ERP.q[k].push(row); };
+const erpPush = (k, row) => { if (!ERP.on) return; if (ERP.q[k].length < 30000) ERP.q[k].push(row); if (DATA.op[k] && DATA.op[k].length < 200000) DATA.op[k].push(row); };
 const erpEvento = e => erpPush('eventos', { ...e });
 const erpRotulo = r => erpPush('rotulos', { ...r });
 const erpCompra = c => erpPush('compras', { ...c, ts: gameTimeMs() });
 const erpExpedicao = x => erpPush('expedicao', { ...x, seq: ++ERP.seq.expedicao, ts: gameTimeMs() });
+const TIPO_FALHA = { sensor: 'sensor_descalibrado', esteira: 'esteira_travada', frio: 'refrigeracao_falha' };
 function erpManut(inc, tipo) {
-  erpPush('manutencao', { os_id: ++ERP.os, tipo: tipo === 'sensor' ? 'sensor_descalibrado' : 'esteira_travada', inicio_ts: inc.inicio, fim_ts: inc.fim });
+  erpPush('manutencao', { os_id: ++ERP.os, tipo: TIPO_FALHA[tipo], inicio_ts: inc.inicio, fim_ts: inc.fim, chamado_ts: inc.chamado, chegada_ts: inc.chegada, peca: inc.peca, espera_peca_min: Math.round(inc.espera || 0) });
 }
 function erpStart() {                                        // chamado depois do pré-aquecimento: a partir daqui tudo entra no ERP
   ERP.on = true;
@@ -3273,11 +3401,484 @@ document.getElementById('erp-btn').addEventListener('click', async () => {
   }
 });
 
+// ───────────────────────── Setores novos ─────────────────────────
+// Laboratório · armazém frio · oficina e peças · resíduos · processamento · utilidades · turnos · pedidos · rastreabilidade
+const cssHex = hex => '#' + hex.toString(16).padStart(6, '0');
+const fmt1 = v => (Math.round(v * 10) / 10).toFixed(1);
+const minToMs = m => BASE_MS + Math.round(m * 60000);
+const hhmm = m => { const x = ((Math.floor(m) % 1440) + 1440) % 1440; return `${String(Math.floor(x / 60)).padStart(2, '0')}:${String(x % 60).padStart(2, '0')}`; };
+const durTxt = m => m < 60 ? `${Math.round(m)} min` : `${Math.floor(m / 60)} h ${String(Math.round(m % 60)).padStart(2, '0')}`;
+
+// sprite com texto que se redesenha quando o conteúdo muda
+function liveSprite(pw, ph, sx, sy, draw) {
+  const c = document.createElement('canvas'); c.width = pw; c.height = ph;
+  const g = c.getContext('2d'), tex = new THREE.CanvasTexture(c); tex.encoding = THREE.sRGBEncoding;
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false }));
+  s.scale.set(sx, sy, 1);
+  const o = { sprite: s, key: null, set(key, ...a) { if (key === o.key) return; o.key = key; g.clearRect(0, 0, pw, ph); draw(g, pw, ph, ...a); tex.needsUpdate = true; } };
+  return o;
+}
+function pillBox(g, w, h, hex) {
+  const css = cssHex(hex), x = 6, y = 6, ww = w - 12, hh = h - 12, r = 26;
+  g.fillStyle = 'rgba(14,17,23,0.88)'; g.strokeStyle = css; g.lineWidth = 5;
+  g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + ww, y, x + ww, y + hh, r); g.arcTo(x + ww, y + hh, x, y + hh, r);
+  g.arcTo(x, y + hh, x, y, r); g.arcTo(x, y, x + ww, y, r); g.closePath(); g.fill(); g.stroke();
+  return css;
+}
+function fitFont(g, text, maxW, size, weight = 700) {
+  let fs = size; g.font = `${weight} ${fs}px system-ui, "Segoe UI", sans-serif`;
+  while (g.measureText(text).width > maxW && fs > 12) { fs -= 2; g.font = `${weight} ${fs}px system-ui, "Segoe UI", sans-serif`; }
+}
+const solidBox = (w, h, d, mat, x, y, z, shadow = true) => {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z);
+  m.castShadow = shadow; m.receiveShadow = true; scene.add(still(m)); return m;
+};
+const matC = (hex, extra = {}) => new THREE.MeshStandardMaterial(Object.assign({ color: col(hex), roughness: 0.6 }, extra));
+const labelAt = (text, hex, sx, sy, x, y, z) => {
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: labelTex(text, hex), transparent: true, depthWrite: false }));
+  s.scale.set(sx, sy, 1); s.position.set(x, y, z); scene.add(s); return s;
+};
+const glassM = new THREE.MeshStandardMaterial({ color: col(0xa8d4ff), roughness: 0.05, metalness: 0.2, transparent: true, opacity: 0.16, side: THREE.DoubleSide, depthWrite: false });
+const whiteM = matC(0xdde3ea, { roughness: 0.7 });
+function glassSeg(x0, z0, x1, z1) {                                   // parede de vidro (base + vidro + viga + pilares)
+  const alongX = Math.abs(x1 - x0) > Math.abs(z1 - z0), len = alongX ? Math.abs(x1 - x0) : Math.abs(z1 - z0), cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
+  const mk = (h, y, mat, sh) => { const m = new THREE.Mesh(new THREE.BoxGeometry(alongX ? len : 0.06, h, alongX ? 0.06 : len), mat); m.position.set(cx, y, cz); m.castShadow = !!sh; scene.add(still(m)); };
+  mk(0.9, 0.45, whiteM, true); mk(1.5, 1.65, glassM); mk(0.08, 2.46, M.steel);
+  const n = Math.max(1, Math.round(len / 1.5));
+  for (let i = 0; i <= n; i++) { const t = -len / 2 + len * i / n; const p = new THREE.Mesh(new THREE.BoxGeometry(0.07, 2.5, 0.07), M.steel); p.position.set(alongX ? cx + t : cx, 1.25, alongX ? cz : cz + t); scene.add(still(p)); }
+  solid(Math.min(x0, x1) - 0.05, Math.max(x0, x1) + 0.05, Math.min(z0, z1) - 0.05, Math.max(z0, z1) + 0.05);
+}
+
+// ═════════ 1. Laboratório de qualidade (recebimento) ═════════
+const LAB = { x0: -15.3, x1: -11.3, z0: 6.7, z1: 9.6, state: 'wait', t: 0, dur: 14, queue: [], cur: null, aim: new THREE.Vector3(-14.3, 1.2, 9.2) };
+{
+  const fl = new THREE.Mesh(new THREE.PlaneGeometry(LAB.x1 - LAB.x0, LAB.z1 - LAB.z0), matC(0xe6ebf0, { roughness: 0.5 }));
+  fl.rotation.x = -Math.PI / 2; fl.position.set((LAB.x0 + LAB.x1) / 2, 0.013, (LAB.z0 + LAB.z1) / 2); fl.receiveShadow = true; scene.add(still(fl));
+  glassSeg(LAB.x0, LAB.z0, LAB.x1, LAB.z0);                                        // norte
+  glassSeg(LAB.x1, LAB.z0, LAB.x1, 7.1); glassSeg(LAB.x1, 8.0, LAB.x1, LAB.z1);    // leste (porta entre 7.1 e 8.0)
+  solidBox(3.6, 0.9, 0.62, M.dark, -13.3, 0.45, 9.3); solidBox(3.64, 0.05, 0.66, whiteM, -13.3, 0.92, 9.3);   // bancada
+  const mic = new THREE.Group(); mic.position.set(-14.3, 0.95, 9.2);                // microscópio
+  const mb = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.05, 0.22), M.dark); mb.position.y = 0.025; mic.add(mb);
+  const ma = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.34, 8), M.steel); ma.position.set(0, 0.2, -0.06); mic.add(ma);
+  const mh = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.22, 10), M.steel); mh.position.set(0, 0.34, 0.02); mh.rotation.x = 0.5; mic.add(mh);
+  scene.add(mic);
+  const cen = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.24, 0.22, 18), M.steel); cen.position.set(-13.2, 1.06, 9.25); cen.castShadow = true; scene.add(cen);
+  LAB.led = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), new THREE.MeshStandardMaterial({ color: col(0x39d98a), emissive: col(0x39d98a), emissiveIntensity: 0.2 }));
+  LAB.led.position.set(-13.2, 1.2, 9.04); scene.add(LAB.led);
+  solidBox(0.7, 1.1, 0.5, M.steel, -11.8, 0.55, 9.3); solidBox(0.5, 0.2, 0.04, new THREE.MeshBasicMaterial({ color: col(0x4fa8ff) }), -11.8, 0.85, 9.04, false);   // analisador
+  solidBox(0.5, 0.03, 0.34, whiteM, -12.5, 0.96, 9.25, false);                      // bandeja de amostras
+  for (let i = 0; i < 3; i++) { const h = new THREE.Mesh(new THREE.SphereGeometry(0.06, 10, 8), matC(0xe9d79a, { roughness: 0.8 })); h.scale.y = 0.6; h.position.set(-12.62 + i * 0.12, 1.0, 9.25); scene.add(h); }
+  LAB.w = makeWorker(0xffffff, 0xffffff); LAB.w.g.position.set(-13.3, 0, 8.55); scene.add(LAB.w.g);
+  labelAt('LABORATÓRIO', 0x9fd4ff, 1.8, 0.67, -13.3, 2.85, 8.2);
+  LAB.disp = liveSprite(512, 190, 2.6, 0.97, (g, w, h, rows, hex) => {
+    pillBox(g, w, h, hex); g.textAlign = 'left'; g.textBaseline = 'middle';
+    rows.forEach((r, i) => { g.fillStyle = i === 0 ? cssHex(hex) : '#d9e2ee'; fitFont(g, r, w - 44, i === 0 ? 40 : 30, i === 0 ? 800 : 600); g.fillText(r, 24, 40 + i * 44); });
+  });
+  LAB.disp.sprite.position.set(-13.3, 2.15, 8.2); scene.add(LAB.disp.sprite);
+}
+const LAB_BASE = [{ ms: 21.8, ac: 0.09, um: 77.6 }, { ms: 20.3, ac: 0.15, um: 79.0 }, { ms: 18.6, ac: 0.26, um: 80.8 }];   // por fornecedor
+const gauss = () => (Math.random() + Math.random() + Math.random() - 1.5) / 0.5;
+function labAnalyze(lote) {
+  const L = LOTS[lote]; if (!L) return;
+  const b = LAB_BASE[L.si];
+  const ms = b.ms - 1.1 * L.q + 0.3 * gauss(), ac = Math.max(0.03, b.ac + 0.07 * L.q + 0.02 * gauss()), um = b.um + 0.9 * L.q + 0.35 * gauss();
+  const res = (ac > 0.24 || ms < 18.4) ? 'REPROVADO' : (ac > 0.16 || ms < 19.8 || um > 80.2) ? 'RESSALVA' : 'APROVADO';
+  L.lab = { ms, ac, um, res, ts: gameTimeMs() };
+  LABLOG.unshift({ lote, si: L.si, ...L.lab }); if (LABLOG.length > 12) LABLOG.pop();
+  erpPush('lab', { lote_id: lote, fornecedor_id: SUP[L.si].id, ts: L.lab.ts, materia_seca_pct: +ms.toFixed(2), acucar_pct: +ac.toFixed(3), umidade_pct: +um.toFixed(2), resultado: res });
+}
+const LABLOG = [];
+const RES_COR = { APROVADO: 0x39d98a, RESSALVA: 0xffc929, REPROVADO: 0xff6b6b };
+function stepLab(dt) {
+  const w = LAB.w, kk = Math.min(1, 8 * dt);
+  w.g.updateMatrixWorld(true); LAB.t += dt;
+  if (LAB.state === 'wait') {
+    relaxArms(w, kk); w.head.rotation.x -= w.head.rotation.x * kk; faceTo(w, -13.3, 9.9, kk);
+    if (LAB.queue.length) { LAB.cur = LAB.queue.shift(); LAB.state = 'work'; LAB.t = 0; }
+  } else {
+    faceTo(w, LAB.aim.x, LAB.aim.z, kk); for (const a of w.arms) aimArm(a, LAB.aim, kk); w.head.rotation.x += (0.35 - w.head.rotation.x) * kk;
+    LAB.led.material.emissiveIntensity = 0.9 + 0.9 * Math.sin(LAB.t * 8);
+    if (LAB.t >= LAB.dur) { labAnalyze(LAB.cur); LAB.cur = null; LAB.state = 'wait'; LAB.led.material.emissiveIntensity = 0.2; }
+  }
+  if (LAB.state === 'work') { const pc = Math.round(100 * LAB.t / LAB.dur / 10) * 10; LAB.disp.set('w' + LAB.cur + pc, [`Analisando ${LAB.cur}…`, `${SUP[LOTS[LAB.cur].si].nome} · ${pc}%`, 'matéria seca · açúcar · umidade'], 0x9fd4ff); }
+  else if (LABLOG[0]) { const r = LABLOG[0]; LAB.disp.set('r' + r.lote, [`${r.lote} · ${r.res}`, `matéria seca ${fmt1(r.ms)}% · umidade ${fmt1(r.um)}%`, `açúcares redutores ${r.ac.toFixed(2)}%`], RES_COR[r.res]); }
+  else LAB.disp.set('idle', ['Aguardando lote', 'a análise começa na chegada do caminhão', ''], 0x9fd4ff);
+}
+
+// ═════════ 2. Armazém frio (refrigeração, temperatura e deterioração) ═════════
+// COLD fica no topo do script; aqui entram o cenário e a física
+const coldFans = [];
+{
+  const tint = new THREE.Mesh(new THREE.BoxGeometry(4.8, 2.7, 3.0), new THREE.MeshBasicMaterial({ color: col(0x9fd4ff), transparent: true, opacity: 0.045, depthWrite: false }));
+  tint.position.set(-9.9, 1.35, 2.5); scene.add(tint); COLD.tint = tint;
+  solidBox(1.6, 0.34, 0.7, M.steel, -9.9, 4.1, 2.5);                                // evaporador pendurado
+  for (const dx of [-0.55, 0.55]) {
+    const f = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, 0.04, 14), M.dark); f.position.set(-9.9 + dx, 3.91, 2.5); scene.add(f); coldFans.push(f);
+    for (const sx of [-1, 1]) { const rod = new THREE.Mesh(new THREE.BoxGeometry(0.03, 2.2, 0.03), M.dark); rod.position.set(-9.9 + dx + sx * 0.2, 5.2, 2.5); scene.add(still(rod)); }
+  }
+  const cond = solidBox(0.9, 1.4, 1.1, M.steel, -15.3, 0.7, -4.4);                  // condensador junto à parede
+  const cf = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.34, 0.04, 16), M.dark); cf.position.set(-15.3, 1.42, -4.4); scene.add(cf); coldFans.push(cf);
+  const pipeM = matC(0x6a7684, { metalness: 0.6, roughness: 0.4 });
+  solidBox(0.06, 2.75, 0.06, pipeM, -15.3, 2.8, -4.4, false);                       // tubulação: sobe, atravessa e desce até o evaporador
+  solidBox(0.06, 0.06, 6.9, pipeM, -15.3, 4.1, -0.95, false);
+  solidBox(5.35, 0.06, 0.06, pipeM, -12.65, 4.1, 2.5, false);
+  labelAt('CONDENSADOR', 0x7ec8ff, 1.5, 0.56, -15.3, 2.2, -4.4);
+  COLD.sign = liveSprite(384, 150, 2.1, 0.82, (g, w, h, t1, t2, hex) => {
+    pillBox(g, w, h, hex); g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillStyle = cssHex(hex); fitFont(g, t1, w - 40, 56, 800); g.fillText(t1, w / 2, 56);
+    g.fillStyle = '#d9e2ee'; fitFont(g, t2, w - 40, 28, 600); g.fillText(t2, w / 2, 106);
+  });
+  COLD.sign.sprite.position.set(-9.9, 3.2, 2.5); scene.add(COLD.sign.sprite);
+  solid(-15.8, -14.8, -5.0, -3.8);
+}
+const noteDoor = () => { COLD.door = Math.min(1, COLD.door + 0.35); };
+function coldLoss(c, motivo) {                                                      // caixa descartada por deterioração
+  COLD.losses++;
+  erpPush('perdas', { seq: ++ERP.seq.perdas, ts: gameTimeMs(), lote_id: c.lote, fornecedor_id: SUP[c.si].id, batatas: c.n, motivo: motivo || 'deterioração' });
+  wasteAddKg('compostagem', c.n * 0.17, 'armazem');
+}
+function stepCold(dt) {
+  const hh = (clock.min / 60) % 24, amb = hh >= 7 && hh < 19 ? 17 : 12;
+  COLD.door = Math.max(0, COLD.door - dt / 6);
+  if (COLD.fail) COLD.comp = false;
+  else if (COLD.temp > COLD.set + 0.8) COLD.comp = true;
+  else if (COLD.temp < COLD.set - 0.8) COLD.comp = false;
+  const gain = (amb - COLD.temp) / (COLD.fail ? 60 : 160) * (1 + COLD.door);
+  COLD.temp = clamp(COLD.temp + (gain - (COLD.comp ? 0.12 : 0)) * dt, 2, amb + 1);
+  const f = Math.exp((COLD.temp - 6) / 2.5);
+  let mx = 0, age = 0;
+  for (const arr of store.slots) for (const c of arr) {
+    c.deg = Math.min(1, (c.deg || 0) + 0.0005 * f * dt);
+    if (c.deg > mx) mx = c.deg;
+    age = Math.max(age, NOW.min - (c.t0 == null ? NOW.min : c.t0));
+  }
+  COLD.degMax = mx; COLD.idadeMax = age;
+  for (const fan of coldFans) if (COLD.comp) fan.rotation.y += 14 * dt;
+  COLD.tint.material.color.copy(col(COLD.fail ? 0xff9d6b : 0x9fd4ff)); COLD.tint.material.opacity = COLD.fail ? 0.07 : 0.045;
+  const hot = COLD.temp > 9;
+  COLD.sign.set(fmt1(COLD.temp) + (hot ? 'h' : COLD.comp ? 'c' : 'o'), `❄ ${fmt1(COLD.temp)} °C`, hot ? 'ALARME · refrigeração parada' : COLD.comp ? 'compressor ligado' : 'compressor em espera', hot ? 0xff6b6b : 0x7ec8ff);
+}
+
+// ═════════ 3. Oficina e peças ═════════
+const shelfBoxes = {};
+{
+  const sx = -7.0, sz = 4.5;
+  for (const [dx, dz] of [[-0.55, -0.2], [0.55, -0.2], [-0.55, 0.2], [0.55, 0.2]]) solidBox(0.05, 1.7, 0.05, M.steel, sx + dx, 0.85, sz + dz, false);
+  const rows = [['correia', 0x3b3f47, 0.35], ['lente', 0x3d7ccf, 0.85], ['compressor', 0xe8731c, 1.35]];
+  for (const [k, hex, y] of rows) {
+    solidBox(1.2, 0.04, 0.5, M.wood, sx, y, sz, false);
+    shelfBoxes[k] = [];
+    for (let i = 0; i < 5; i++) { const b = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.2, 0.3), matC(hex)); b.position.set(sx - 0.45 + i * 0.22, y + 0.12, sz); b.castShadow = true; scene.add(b); shelfBoxes[k].push(b); }
+  }
+  solid(sx - 0.65, sx + 0.65, sz - 0.3, sz + 0.3);
+  labelAt('OFICINA · PEÇAS', 0xf0b020, 1.9, 0.7, sx, 2.2, sz);
+  PARTS.sprite = liveSprite(384, 120, 1.9, 0.6, (g, w, h, t) => { pillBox(g, w, h, 0xf0b020); g.fillStyle = '#e9eef6'; g.textAlign = 'center'; g.textBaseline = 'middle'; fitFont(g, t, w - 36, 34, 700); g.fillText(t, w / 2, h / 2 + 2); });
+  PARTS.sprite.sprite.position.set(sx, 2.75, sz); scene.add(PARTS.sprite.sprite);
+}
+const PART_OF = { esteira: 'correia', sensor: 'lente', frio: 'compressor' };
+function partLog(k, evento) { const P = PARTS[k]; erpPush('pecas', { seq: ++ERP.seq.pecas, ts: gameTimeMs(), peca: k, evento, estoque: P.n }); }
+function stepParts(dt) {
+  for (const k in PARTS) {
+    if (!PARTS[k] || typeof PARTS[k].n !== 'number') continue;
+    const P = PARTS[k];
+    if (P.n <= P.min && P.pedido == null) { P.pedido = P.lead; partLog(k, 'pedido'); }
+    if (P.pedido != null) { P.pedido -= dt; if (P.pedido <= 0) { P.n += P.lote; P.pedido = null; partLog(k, 'chegada'); } }
+    shelfBoxes[k].forEach((b, i) => { b.visible = i < P.n; });
+  }
+  PARTS.sprite.set(['correia', 'lente', 'compressor'].map(k => PARTS[k].n).join('/'), `correia ${PARTS.correia.n} · lente ${PARTS.lente.n} · compr. ${PARTS.compressor.n}`);
+}
+
+// ═════════ 4. Resíduos e subprodutos ═════════
+const wasteBins = {};
+{
+  const defs = [['racao', 'RAÇÃO', 0x8a6a44, -4.6], ['compostagem', 'COMPOST.', 0x3a9d5d, -3.3], ['aterro', 'ATERRO', 0x6a7684, -2.0]];
+  for (const [k, nome, hex, x] of defs) {
+    const z = -8.8;
+    solidBox(1.0, 0.06, 1.0, M.dark, x, 0.03, z, false);
+    for (const [w, d, ox, oz] of [[1.0, 0.05, 0, -0.475], [1.0, 0.05, 0, 0.475], [0.05, 1.0, -0.475, 0], [0.05, 1.0, 0.475, 0]]) solidBox(w, 1.0, d, matC(hex, { metalness: 0.3 }), x + ox, 0.55, z + oz);
+    const mass = new THREE.Mesh(new THREE.BoxGeometry(0.88, 1, 0.88), matC(k === 'racao' ? 0xb48a55 : k === 'compostagem' ? 0x5b7a3a : 0x55575c, { roughness: 0.95 }));
+    mass.position.set(x, 0.06, z); scene.add(mass); wasteBins[k] = mass;
+    solid(x - 0.55, x + 0.55, z - 0.55, z + 0.55);
+    labelAt(nome, hex, 1.15, 0.43, x, 1.75, z);
+  }
+  labelAt('RESÍDUOS', 0xc79a5b, 1.6, 0.6, -3.3, 2.5, -8.8);
+}
+function wasteClass(p) { return p.kind !== 'normal' ? 'aterro' : p.defect === 'podre' ? 'compostagem' : 'racao'; }
+function wasteAddKg(dest, kg, origem) {
+  const W = WASTE[dest]; if (!W) return;
+  W.kg += kg; WASTE.total[dest] += kg;
+  erpPush('residuos', { seq: ++ERP.seq.residuos, ts: gameTimeMs(), destino: dest, kg: +kg.toFixed(3), origem, tipo: 'geracao' });
+  if (W.kg >= W.cap) {
+    erpPush('residuos', { seq: ++ERP.seq.residuos, ts: gameTimeMs(), destino: dest, kg: +W.kg.toFixed(3), origem: 'coleta', tipo: 'coleta' });
+    W.coletas++; W.kg = 0;
+  }
+}
+function wasteFromPotato(p, origem) { wasteAddKg(wasteClass(p), p.peso / 1000, origem); }
+function stepWaste(dt) {
+  for (const k in wasteBins) { const W = WASTE[k], m = wasteBins[k], h = 0.04 + 0.86 * Math.min(1, W.kg / W.cap); m.scale.y += (h - m.scale.y) * Math.min(1, 4 * dt); m.position.y = 0.06 + m.scale.y / 2; }
+}
+
+// ═════════ 5. Processamento: descasque e corte do calibre grande (sobre a curva das BOAS) ═════════
+const PROCM = { zIn: 1.55, count: 0, casca: 0, apara: 0, entrada: 0, active: 0, brush: [], flakes: null, flv: null };
+const potatoPeeled = new THREE.MeshStandardMaterial({ color: col(0xe8d596), roughness: 0.75, metalness: 0 });
+{
+  const cx = 8.9, z0 = 1.3, z1 = 2.3;
+  for (const x of [7.85, 9.95]) for (const z of [z0, z1]) solidBox(0.1, 2.3, 0.1, M.frame, x, 1.15, z);
+  solidBox(2.3, 0.14, 1.2, M.frame, cx, 2.3, (z0 + z1) / 2);
+  solidBox(1.7, 0.5, 0.95, M.steel, cx, 1.98, (z0 + z1) / 2);
+  const rollM = matC(0xe8731c, { roughness: 0.7 });
+  for (const dz of [-0.28, 0.28]) { const r = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 1.6, 14), rollM); r.rotation.z = Math.PI / 2; r.position.set(cx, 1.62, (z0 + z1) / 2 + dz); scene.add(r); PROCM.brush.push(r); }
+  const blade = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.025, 6, 16), M.steel); blade.position.set(cx, 1.62, z1 - 0.12); blade.rotation.y = Math.PI / 2; scene.add(blade); PROCM.blade = blade;
+  labelAt('DESCASQUE · CORTE', 0xe8731c, 2.1, 0.78, cx, 3.0, (z0 + z1) / 2);
+  const n = 40; PROCM.flv = [];
+  const g = new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(new Float32Array(n * 3), 3));
+  PROCM.flakes = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xd6c07a, size: 0.06, transparent: true, opacity: 0.9, depthWrite: false }));
+  PROCM.flakes.frustumCulled = false; PROCM.flakes.visible = false; scene.add(PROCM.flakes);
+  for (let i = 0; i < n; i++) PROCM.flv.push({ x: 0, y: -9, z: 0, vx: 0, vy: 0, vz: 0, life: 0 });
+}
+function procBurst() {
+  for (const f of PROCM.flv) if (f.life <= 0 && Math.random() < 0.45) { f.x = 8.9 + rand(-0.5, 0.5); f.y = 1.6; f.z = 1.8 + rand(-0.4, 0.4); f.vx = rand(-0.7, 0.7); f.vy = rand(0.3, 1.5); f.vz = rand(-0.5, 0.9); f.life = rand(0.5, 1.0); }
+}
+function procPotato(p) {
+  p.proc = true;
+  if (p.kind !== 'normal' || p.s <= LARGE_S) return;                  // só o calibre grande passa pelo descasque e corte
+  const inG = p.peso, casca = Math.round(inG * rand(0.08, 0.14)), apara = Math.round(inG * rand(0.03, 0.06)), out = inG - casca - apara;
+  p.peeled = true; p.pesoFinal = out;
+  p.mesh.material = potatoPeeled; p.mesh.scale.multiplyScalar(0.93); p.h *= 0.93;
+  for (const ch of p.mesh.children) ch.visible = false;
+  PROCM.count++; PROCM.casca += casca; PROCM.apara += apara; PROCM.entrada += inG; PROCM.active = 2.5; UT.proc = 3;
+  procBurst();
+  wasteAddKg('racao', (casca + apara) / 1000, 'processamento');
+  erpPush('processamento', { seq: ++ERP.seq.proc, ts: gameTimeMs(), lote_id: p.lote, batata_id: p.uuid, entrada_g: inG, casca_g: casca, apara_g: apara, saida_g: out });
+}
+function stepProc(dt) {
+  PROCM.active = Math.max(0, PROCM.active - dt);
+  const on = PROCM.active > 0, bf = on ? 9 : 1.2;
+  for (const r of PROCM.brush) r.rotation.x += bf * dt;
+  PROCM.blade.rotation.x += bf * 1.3 * dt;
+  let any = false; const pos = PROCM.flakes.geometry.attributes.position;
+  PROCM.flv.forEach((f, i) => {
+    if (f.life > 0) { f.life -= dt; f.vy -= 6 * dt; f.x += f.vx * dt; f.y += f.vy * dt; f.z += f.vz * dt; if (f.y < 1.15) f.life = 0; any = true; }
+    pos.setXYZ(i, f.x, f.life > 0 ? f.y : -9, f.z);
+  });
+  PROCM.flakes.visible = any; pos.needsUpdate = true;
+}
+
+// ═════════ 6. Utilidades: energia e água por setor ═════════
+const UT_NOME = { esteiras: 'Esteiras', sensor_triagem: 'Sensor e triagem', lavagem: 'Lavagem', qualidade: 'Sala de qualidade', processamento: 'Processamento', armazem_frio: 'Armazém frio',
+  empilhadeiras: 'Empilhadeiras', iluminacao: 'Iluminação', embalagem: 'Embalagem', laboratorio: 'Laboratório' };
+{
+  solidBox(1.3, 2.1, 0.45, matC(0xb8c0cc, { metalness: 0.4 }), -12.4, 1.05, -9.6);                // quadro de energia
+  for (let i = 0; i < 6; i++) solidBox(0.1, 0.1, 0.03, new THREE.MeshBasicMaterial({ color: col(i % 3 ? 0x39d98a : 0xffc929) }), -12.9 + i * 0.2, 1.7, -9.37, false);
+  const tk = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 1.9, 22), matC(0x7ab8e8, { metalness: 0.3, roughness: 0.4 }));  // caixa d'água
+  tk.position.set(-14.4, 0.95, -9.0); tk.castShadow = true; scene.add(tk); solid(-15.1, -13.7, -9.7, -8.3);
+  UT.sign = liveSprite(448, 150, 2.4, 0.8, (g, w, h, a, b) => {
+    pillBox(g, w, h, 0xffc929); g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillStyle = '#ffd84d'; fitFont(g, a, w - 36, 44, 800); g.fillText(a, w / 2, 52);
+    g.fillStyle = '#9fd4ff'; fitFont(g, b, w - 36, 40, 800); g.fillText(b, w / 2, 104);
+  });
+  UT.sign.sprite.position.set(-13.4, 3.1, -9.0); scene.add(UT.sign.sprite);
+  labelAt('UTILIDADES', 0xffc929, 1.6, 0.6, -13.4, 2.45, -9.0);
+}
+function stepUtil(dt) {
+  UT.wash = Math.max(0, UT.wash - dt); UT.proc = Math.max(0, UT.proc - dt);
+  const vm = fault.active === 'esteira' ? 0 : sim.beltSpeed, hh = (clock.min / 60) % 24, night = hh >= 19 || hh < 6;
+  const act = inspectors.filter(I => !I.off).length;
+  const kw = {
+    esteiras: 0.25 + 0.75 * vm / 1.4, sensor_triagem: 0.7 + 0.5 * scanner.flash + (fault.cal < 0.75 ? 0.3 : 0), lavagem: UT.wash > 0 ? 3.4 : 0.6,
+    qualidade: 0.9 + 0.12 * act, processamento: UT.proc > 0 ? 2.8 : 0.3, armazem_frio: COLD.comp ? 4.2 : 0.5,
+    empilhadeiras: FKS.reduce((s, F) => s + (F.cur ? (F.cur.k === 'drive' ? 1.5 : 0.8) : 0.25), 0), iluminacao: night ? 3.0 : 1.2,
+    embalagem: pack.table.length > 0 || pack.flash > 0 ? 0.8 : 0.35, laboratorio: LAB.state === 'work' ? 1.1 : 0.4,
+  };
+  const lpm = { lavagem: UT.wash > 0 ? 15 : 1, processamento: UT.proc > 0 ? 4 : 0, qualidade: 0.5, laboratorio: LAB.state === 'work' ? 0.8 : 0.1, embalagem: 0.2, armazem_frio: COLD.comp ? 0.3 : 0 };
+  for (const k of UT_SET) { UT.kw[k] = kw[k]; UT.lpm[k] = lpm[k] || 0; UT.kwh[k] += kw[k] * dt / 60; UT.agua[k] += (lpm[k] || 0) * dt; }
+}
+function utilSnapshot() {
+  const ts = gameTimeMs();
+  for (const k of UT_SET) {
+    const dk = UT.kwh[k] - UT.lastK[k], da = UT.agua[k] - UT.lastA[k]; UT.lastK[k] = UT.kwh[k]; UT.lastA[k] = UT.agua[k];
+    erpPush('utilidades', { seq: ++ERP.seq.util, ts, setor: k, kwh: +dk.toFixed(4), agua_l: +da.toFixed(3) });
+  }
+}
+
+// ═════════ 7. Turnos e pessoas ═════════
+const SHIFT_FAT = { A: 0, B: 0.02, C: 0.07 };                         // cansaço: a noite erra mais
+function stepCrew(dt) {
+  const t = shiftOf(clock.min);
+  if (t !== CREW.turno) {
+    CREW.turno = t; const n = t === 'C' ? 2 : 3;
+    inspectors.forEach((I, i) => { I.off = i >= n; });
+    erpPush('escala', { seq: ++ERP.seq.escala, ts: gameTimeMs(), turno: t, inspetores: n, operador_id: OPERADORES[t] });
+  }
+  for (const I of inspectors) I.w.g.visible = !(I.off && I.state === 'idle');
+}
+
+// ═════════ 8. Pedidos e entregas ═════════
+const CLIENTES = ['Mercado Central', 'Rede Fresca', 'Restaurantes Unidos', 'Atacado Boa Safra'];
+function ordSync(o) {
+  erpPush('pedidos', { pedido_id: o.id, cliente: o.cliente, criado_ts: minToMs(o.criado), prazo_ts: minToMs(o.prazo), paletes: o.paletes, atendidos: o.atendidos, status: o.status, fechado_ts: o.fechado == null ? null : minToMs(o.fechado) });
+}
+function newOrder() {
+  const rush = Math.random() < 0.2;
+  const o = { id: 'P-' + String(++ORD.seq).padStart(3, '0'), cliente: pick(CLIENTES), criado: NOW.min, prazo: NOW.min + (rush ? rand(150, 240) : rand(300, 540)), paletes: pick([2, 2, 3, 3, 4]), atendidos: 0, status: 'aberto', fechado: null, rush };
+  ORD.list.push(o); ordSync(o);
+}
+for (let i = 0; i < 2; i++) newOrder();
+function stepOrders(dt) {
+  ORD.next -= dt; if (ORD.next <= 0) { newOrder(); ORD.next = rand(110, 200); }
+  for (const o of ORD.list) if (o.status === 'aberto' && NOW.min > o.prazo) { o.status = 'atrasado'; ordSync(o); }
+  while (ORD.list.length > 30 && ORD.list[0].status === 'entregue') ORD.list.shift();
+}
+function closeCarga() {                                                // o caminhão sai: abate os paletes dos pedidos abertos (o mais urgente primeiro)
+  const T = TRUCK, cargo = T.manifest.slice(), ts = gameTimeMs();
+  SHIPPED.push({ carga: T.carga || 0, ts, paletes: cargo });
+  let left = cargo.length;
+  const open = ORD.list.filter(o => o.status !== 'entregue').sort((a, b) => a.prazo - b.prazo);
+  for (const o of open) {
+    if (left <= 0) break;
+    const k = Math.min(left, o.paletes - o.atendidos); left -= k; o.atendidos += k;
+    let atraso = 0;
+    if (o.atendidos >= o.paletes) {
+      atraso = Math.max(0, Math.round(NOW.min - o.prazo)); o.status = 'entregue'; o.fechado = NOW.min;
+      ORD.closed++; if (atraso === 0) ORD.onTime++; else ORD.lateMin += atraso;
+    }
+    erpPush('entregas', { seq: ++ERP.seq.entregas, pedido_id: o.id, carga_id: T.carga || 0, ts, paletes: k, atraso_min: atraso });
+    ordSync(o);
+  }
+  if (left > 0) erpPush('entregas', { seq: ++ERP.seq.entregas, pedido_id: null, carga_id: T.carga || 0, ts, paletes: left, atraso_min: 0 });
+  T.manifest = [];
+}
+
+// ═════════ 9. Rastreabilidade: do lote ao caminhão ═════════
+const sumMix = arr => { const m = {}; for (const it of arr) { const l = it.userData && it.userData.lotes; if (l) for (const k in l) m[k] = (m[k] || 0) + l[k]; } return m; };
+const mixTotal = m => Object.values(m || {}).reduce((s, v) => s + v, 0);
+const recTex = labelTex('RECALL', 0xff4d4d);
+function recClear() { REC.markers.forEach(m => { if (m.parent) m.parent.remove(m); }); REC.markers = []; }
+function recMark(lote) {
+  recClear(); if (!lote) return;
+  const add = g => { if (!g) return; const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: recTex, transparent: true, depthTest: false })); s.scale.set(1.3, 0.49, 1); s.position.set(0, 2.2, 0); s.renderOrder = 9; g.add(s); REC.markers.push(s); };
+  for (const sl of [...EXP.slots, ...STK.slots]) if (sl.pal && sl.pal !== 'reserved' && sl.pal.lotes && sl.pal.lotes[lote]) add(sl.pal.g);
+  for (const P of [PAL.S, PAL.B]) if (P.g && sumMix(P.items)[lote]) add(P.g);
+  TRUCK.manifest.forEach((m, i) => { if (m.lotes[lote]) add(TRUCK.pallets[i]); });
+}
+function palName(sl, i, isExp) { return isExp ? `Expedição ${i < 3 ? 'A' : 'B'}${(i % 3) + 1}` : `Estoque · prateleira ${sl.x < 8 ? 1 : 2}, andar ${sl.lvl + 1}`; }
+function lotLocation(lote) {
+  const r = { linha: live.filter(p => p.lote === lote).length, tremonha: BUN.list.filter(e => e.lote === lote).reduce((s, e) => s + e.n, 0), caixas: 0, prod: [], exp: [], est: [], truck: [], ship: [] };
+  for (const arr of store.slots) for (const c of arr) if (c.lote === lote) r.caixas++;
+  for (const P of [PAL.S, PAL.B]) { const n = P.g ? (sumMix(P.items)[lote] || 0) : 0; if (n) r.prod.push({ nome: `Palete de ${P.kind} em formação`, n }); }
+  EXP.slots.forEach((sl, i) => { if (sl.pal && sl.pal !== 'reserved' && sl.pal.lotes && sl.pal.lotes[lote]) r.exp.push({ nome: `${sl.pal.id ? 'PL-' + String(sl.pal.id).padStart(4, '0') : ''} · ${palName(sl, i, true)}`, n: sl.pal.lotes[lote] }); });
+  STK.slots.forEach((sl, i) => { if (sl.pal && sl.pal !== 'reserved' && sl.pal.lotes && sl.pal.lotes[lote]) r.est.push({ nome: `${sl.pal.id ? 'PL-' + String(sl.pal.id).padStart(4, '0') : ''} · ${palName(sl, i, false)}`, n: sl.pal.lotes[lote] }); });
+  TRUCK.manifest.forEach(m => { if (m.lotes[lote]) r.truck.push({ nome: `PL-${String(m.id).padStart(4, '0')} no caminhão (carga ${TRUCK.carga || 0})`, n: m.lotes[lote] }); });
+  for (const s of SHIPPED) for (const m of s.paletes) if (m.lotes[lote]) r.ship.push({ nome: `PL-${String(m.id).padStart(4, '0')} · carga ${s.carga}`, n: m.lotes[lote], ts: s.ts });
+  return r;
+}
+
+// ═════════ Passo dos setores, HUD e fotografias para o ERP ═════════
+let setHudAcc = 0, setSnapAcc = 0;
+function stepSetores(dt) {
+  stepLab(dt); stepCold(dt); stepParts(dt); stepProc(dt); stepWaste(dt); stepCrew(dt); stepOrders(dt); stepUtil(dt);
+  setSnapAcc += dt;
+  if (setSnapAcc >= 5) {
+    setSnapAcc = 0; utilSnapshot();
+    erpPush('armazem', { seq: ++ERP.seq.armazem, ts: gameTimeMs(), temp_c: +COLD.temp.toFixed(2), compressor: COLD.comp ? 1 : 0, falha: COLD.fail ? 1 : 0, caixas: storeCount(),
+      idade_max_min: Math.round(COLD.idadeMax), deterioracao_max: +COLD.degMax.toFixed(3), caixas_descartadas: COLD.losses });
+  }
+  setHudAcc += dt;
+  if (setHudAcc > 0.4) {
+    setHudAcc = 0;
+    const kw = UT_SET.reduce((s, k) => s + UT.kw[k], 0), lpm = UT_SET.reduce((s, k) => s + UT.lpm[k], 0);
+    $('n-frio').textContent = `${fmt1(COLD.temp)} °C`; $('n-frio').style.color = COLD.temp > 9 ? '#ff9d9d' : '';
+    $('n-kw').textContent = `${fmt1(kw)} kW`; $('n-agua').textContent = `${Math.round(lpm)} L/min`;
+    const open = ORD.list.filter(o => o.status !== 'entregue'); const late = open.filter(o => o.status === 'atrasado').length;
+    $('n-ped').textContent = `${open.length} abertos${late ? ' · ' + late + ' atras.' : ''}`; $('n-ped').style.color = late ? '#ff9d9d' : '';
+    UT.sign.set(Math.round(kw * 10) + '|' + Math.round(lpm), `⚡ ${fmt1(kw)} kW`, `💧 ${Math.round(lpm)} L/min`);
+  }
+}
+function setoresStart() {                                              // chamado quando o ERP começa a gravar (depois do pré-aquecimento)
+  CREW.turno = null; ORD.list.forEach(ordSync);
+  for (const k of UT_SET) { UT.lastK[k] = UT.kwh[k]; UT.lastA[k] = UT.agua[k]; }
+}
+
+// ═════════ Painéis: Setores (S), Rastreio (R) e Pedidos (P) ═════════
+const panelToggle = (id, render) => { const el = $(id); el.hidden = !el.hidden; if (!el.hidden) render(); };
+const setoresEl = $('setores'), rastEl = $('rastreio'), pedEl = $('pedidos');
+const tbl = (head, rows) => `<table><thead><tr>${head.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+const chipRes = r => `<span class="verd ${r === 'APROVADO' ? 'v-best' : r === 'RESSALVA' ? 'v-warn' : 'v-bad'}">${r}</span>`;
+function renderSetores() {
+  const lab = LABLOG.slice(0, 5).map(r => [r.lote, SUP[r.si].nome, fmt1(r.ms) + '%', r.ac.toFixed(2) + '%', fmt1(r.um) + '%', chipRes(r.res)]);
+  const cold = `<p class="big ${COLD.temp > 9 ? 'bad' : ''}">${fmt1(COLD.temp)} °C <small>${COLD.fail ? 'refrigeração parada' : COLD.comp ? 'compressor ligado' : 'compressor em espera'}</small></p>
+    <p>Caixa mais antiga: <b>${durTxt(COLD.idadeMax)}</b> · deterioração máxima: <b>${Math.round(COLD.degMax * 100)}%</b> · caixas descartadas: <b>${COLD.losses}</b></p>`;
+  const util = UT_SET.map(k => [UT_NOME[k], fmt1(UT.kw[k]), UT.lpm[k] ? fmt1(UT.lpm[k]) : '—', fmt1(UT.kwh[k]), Math.round(UT.agua[k])]);
+  const parts = ['correia', 'lente', 'compressor'].map(k => { const P = PARTS[k]; return [P.nome, `<b>${P.n}</b>`, P.pedido != null ? `chega em ${durTxt(P.pedido)}` : '—']; });
+  const inc = DATA.incidentes.filter(i => i.fim).length;
+  const w = WASTE, bars = [['racao', 'Ração', '#b48a55'], ['compostagem', 'Compostagem', '#6fae4a'], ['aterro', 'Aterro', '#8a909a']].map(([k, n, c]) =>
+    `<div class="wrow"><span>${n}</span>${bar(Math.min(1, w[k].kg / w[k].cap), c)}<span>${fmt1(w[k].kg)}/${w[k].cap} kg</span><small>${w.total[k] ? fmt1(w.total[k]) : '0'} kg no total · ${w[k].coletas} coletas</small></div>`).join('');
+  const sh = ['A', 'B', 'C'].map(t => { const s = CREW.stat[t]; return [`${t}${t === CREW.turno ? ' ●' : ''}`, t === 'C' ? 2 : 3, s.n, s.n ? pctS(s.ruim / s.n) : '—', s.insp ? pctS(s.rej / s.insp) : '—']; });
+  const pr = PROCM.entrada ? PROCM : null;
+  $('setores-body').innerHTML = `
+    <div class="sbox"><h4>Laboratório · análises de lote</h4>${lab.length ? tbl(['Lote', 'Fornecedor', 'M. seca', 'Açúcar', 'Umid.', 'Resultado'], lab) : '<p class="mut">Nenhuma análise ainda: ela começa quando o caminhão chega.</p>'}</div>
+    <div class="sbox"><h4>Armazém frio</h4>${cold}</div>
+    <div class="sbox"><h4>Utilidades · energia e água</h4>${tbl(['Setor', 'kW', 'L/min', 'kWh', 'Litros'], util)}</div>
+    <div class="sbox"><h4>Oficina e peças</h4>${tbl(['Peça', 'Estoque', 'Reposição'], parts)}<p class="mut">${inc} ordens de serviço concluídas.</p></div>
+    <div class="sbox"><h4>Resíduos e subprodutos</h4>${bars}</div>
+    <div class="sbox"><h4>Turnos e pessoas</h4>${tbl(['Turno', 'Inspet.', 'Batatas', '% refugo', '% reprov. humana'], sh)}<p class="mut">Turno atual: <b>${CREW.turno || '—'}</b> · à noite (C) há 2 inspetores e mais cansaço.</p></div>
+    <div class="sbox"><h4>Processamento · calibre grande</h4>${pr ? `<p>Batatas processadas: <b>${pr.count}</b> · entrada <b>${fmt1(pr.entrada / 1000)} kg</b></p>
+      <p>Casca: <b>${pctS(pr.casca / pr.entrada)}</b> · aparas do corte: <b>${pctS(pr.apara / pr.entrada)}</b> · rendimento: <b>${pctS(1 - (pr.casca + pr.apara) / pr.entrada)}</b></p>` : '<p class="mut">Aguardando a primeira batata grande.</p>'}</div>`;
+}
+function renderRast() {
+  const sel = $('rastreio-sel'), keys = Object.keys(LOTS).sort();
+  if (sel.options.length !== keys.length) { const cur = sel.value || REC.lote || keys[keys.length - 1]; sel.innerHTML = keys.map(k => `<option>${k}</option>`).join(''); sel.value = keys.includes(cur) ? cur : keys[keys.length - 1]; }
+  const lote = sel.value, L = LOTS[lote], loc = lotLocation(lote), S = SUP[L.si];
+  const list = (arr, vazio) => arr.length ? `<ul>${arr.map(a => `<li>${a.nome} <b>${a.n}</b><small> batatas</small></li>`).join('')}</ul>` : `<p class="mut">${vazio}</p>`;
+  const shipped = loc.ship.length ? loc.ship : [];
+  $('rastreio-body').innerHTML = `
+    <div class="sgrid">
+      <div class="sbox"><h4>Origem</h4><p><b>${lote}</b> · ${S.id} ${S.nome}</p><p>${L.recebido ? 'Recebido em ' + new Date(L.recebido).toISOString().slice(5, 16).replace('T', ' ') : 'Estoque inicial'}</p>
+        <p>Laboratório: ${L.lab ? chipRes(L.lab.res) + ` <small>M.seca ${fmt1(L.lab.ms)}% · açúcar ${L.lab.ac.toFixed(2)}%</small>` : '<span class="mut">sem análise</span>'}</p></div>
+      <div class="sbox"><h4>Na fábrica</h4><p>Caixas no armazém: <b>${loc.caixas}</b> · na tremonha: <b>${loc.tremonha}</b> batatas · na linha: <b>${loc.linha}</b></p>
+        <h5>Paletes em formação</h5>${list(loc.prod, 'nenhum')}<h5>Expedição</h5>${list(loc.exp, 'nenhum')}<h5>Estoque</h5>${list(loc.est, 'nenhum')}</div>
+      <div class="sbox"><h4>Fora da fábrica</h4><h5>Carregando agora</h5>${list(loc.truck, 'nenhum')}<h5>Já entregues</h5>${list(shipped, 'este lote ainda não saiu em nenhum caminhão')}</div>
+    </div>`;
+}
+function renderPed() {
+  const rows = ORD.list.slice().sort((a, b) => (a.status === 'entregue') - (b.status === 'entregue') || a.prazo - b.prazo).slice(0, 14).map(o => {
+    const rest = o.prazo - NOW.min, st = o.status === 'entregue' ? '<span class="verd v-best">Entregue</span>' : o.status === 'atrasado' ? '<span class="verd v-bad">Atrasado</span>' : '<span class="verd v-warn">Aberto</span>';
+    const pz = o.status === 'entregue' ? `${hhmm(o.fechado)} (${o.fechado <= o.prazo ? 'no prazo' : '+' + durTxt(o.fechado - o.prazo)})` : (rest >= 0 ? `em ${durTxt(rest)}` : `há ${durTxt(-rest)}`);
+    return [o.id + (o.rush ? ' ⚡' : ''), o.cliente, `${o.atendidos}/${o.paletes}`, hhmm(o.prazo), pz, st];
+  });
+  const otif = ORD.closed ? pctS(ORD.onTime / ORD.closed) : '—';
+  $('pedidos-body').innerHTML = `<div class="kpis"><span>Entregues <b>${ORD.closed}</b></span><span>No prazo <b>${otif}</b></span><span>Atraso médio <b>${ORD.closed - ORD.onTime ? durTxt(ORD.lateMin / (ORD.closed - ORD.onTime)) : '—'}</b></span>
+    <span>Abertos <b>${ORD.list.filter(o => o.status !== 'entregue').length}</b></span></div>${tbl(['Pedido', 'Cliente', 'Paletes', 'Prazo', 'Situação', ''], rows)}
+    <p class="mut">Cada caminhão que sai abate seus paletes dos pedidos abertos, o mais urgente primeiro. ⚡ = pedido urgente.</p>`;
+}
+const togSet = () => panelToggle('setores', renderSetores), togRast = () => panelToggle('rastreio', renderRast), togPed = () => panelToggle('pedidos', renderPed);
+$('setores-btn').addEventListener('click', togSet); $('setores-x').addEventListener('click', () => { setoresEl.hidden = true; });
+$('rastreio-btn').addEventListener('click', togRast); $('rastreio-x').addEventListener('click', () => { rastEl.hidden = true; });
+$('pedidos-btn').addEventListener('click', togPed); $('pedidos-x').addEventListener('click', () => { pedEl.hidden = true; });
+$('rastreio-sel').addEventListener('change', () => { REC.lote = $('rastreio-sel').value; if (REC.on) recMark(REC.lote); renderRast(); });
+$('rastreio-mark').addEventListener('click', () => { REC.on = !REC.on; $('rastreio-mark').classList.toggle('on', REC.on); recMark(REC.on ? $('rastreio-sel').value : null); });
+$('rastreio-recall').addEventListener('click', () => {
+  const lote = $('rastreio-sel').value, loc = lotLocation(lote);
+  const fab = loc.prod.length + loc.exp.length + loc.est.length + loc.truck.length, fora = loc.ship.length;
+  erpPush('recalls', { seq: ++ERP.seq.recalls, ts: gameTimeMs(), lote_id: lote, paletes_na_fabrica: fab, paletes_expedidos: fora, cargas: [...new Set(loc.ship.map(s => s.nome.split('carga ')[1]))].join(',') });
+  REC.on = true; $('rastreio-mark').classList.add('on'); recMark(lote);
+  toast(`Recall simulado do lote ${lote}: ${fab} paletes ainda na fábrica e ${fora} já expedidos (veja o ERP).`);
+});
+window.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || fp.on) return;
+  if (e.code === 'KeyS') togSet(); else if (e.code === 'KeyR') togRast(); else if (e.code === 'KeyP') togPed();
+});
+let panAcc = 0;
+function stepPanels(dt) {
+  panAcc += dt; if (panAcc < 0.6) return; panAcc = 0;
+  if (!setoresEl.hidden) renderSetores(); if (!rastEl.hidden) renderRast(); if (!pedEl.hidden) renderPed();
+}
+
 // ───────────────────────── Loop ─────────────────────────
 // pré-aquece alguns segundos para a linha já aparecer em funcionamento
 for (let i = 0; i < 1500; i++) update(1 / 30);
-DATA.eventos.length = 0; DATA.rotulos.length = 0; DATA.incidentes.length = 0;   // o pré-aquecimento não entra no histórico
-erpStart();
+DATA.eventos.length = 0; DATA.rotulos.length = 0; DATA.incidentes.length = 0; opClear();   // o pré-aquecimento não entra no histórico
+erpStart(); setoresStart();
 stepClock(0);
 
 let last = performance.now();
